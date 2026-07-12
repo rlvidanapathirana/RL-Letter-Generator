@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL Letter Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="seal">RL</div>
+  <div class="brand"><b>RL Letter Generator</b><span>Official letters, bulk-generated in minutes</span></div>
+  <div class="credit">Developed by <a href="https://lakshan.vercel.app" target="_blank">V.P.R. Lakshan Vidanapathirana</a></div>
+</div>
+
+<div class="shell">
+  <div class="nav" id="navList"></div>
+
+  <div class="main">
+
+    <!-- LETTERHEAD -->
+    <div class="panel" data-panel="letterhead">
+      <h1 class="page-title">Letterhead</h1>
+      <p class="page-sub">Logos, organisation name, reference-number labels and footer — these appear on every letter you generate. All text is editable, so this works for any government, semi-government or private organisation.</p>
+
+      <div class="letterhead-layout">
+        <div class="letterhead-controls">
+
+      <div class="card">
+        <h3>Logos</h3>
+        <div class="grid2">
+          <div>
+            <label>Left logo</label>
+            <div id="ctrl-leftLogo"></div>
+          </div>
+          <div>
+            <label>Right logo</label>
+            <div id="ctrl-rightLogo"></div>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:10px">Matches a standard official letterhead: one logo on each side of the centred organisation name. Use the size and X/Y sliders to position each logo exactly where you want it.</p>
+      </div>
+
+      <div class="card">
+        <h3>Or upload full sections as images <span class="badge">Optional</span></h3>
+        <p class="note">If your organisation already has a designed header, sub-header banner or footer as an image, upload it here and it will replace the text-built version above/below on every generated letter. Leave empty to keep using the text fields.</p>
+        <div class="grid3">
+          <div>
+            <label>Full header image</label>
+            <div id="ctrl-headerImage"></div>
+          </div>
+          <div>
+            <label>Sub-header banner image</label>
+            <div id="ctrl-subHeaderImage"></div>
+          </div>
+          <div>
+            <label>Footer image</label>
+            <div id="ctrl-footerImage"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Organisation name</h3>
+        <p class="note">Each line has its own size and X/Y position — nudge any line independently without affecting the others.</p>
+        <div class="tri-group">
+          <div class="tri-title">Ministry / parent body (smaller line)</div>
+          <div class="tri-row"><div class="tri-tag">SI</div><input type="text" id="ministrySi"></div>
+          <div id="ts-ministrySi"></div>
+          <div class="tri-row"><div class="tri-tag ta">TA</div><input type="text" id="ministryTa"></div>
+          <div id="ts-ministryTa"></div>
+          <div class="tri-row"><div class="tri-tag en">EN</div><input type="text" id="ministryEn"></div>
+          <div id="ts-ministryEn"></div>
+        </div>
+        <div class="tri-group">
+          <div class="tri-title">Institute / department (bold, larger line)</div>
+          <div class="tri-row"><div class="tri-tag">SI</div><input type="text" id="instituteSi"></div>
+          <div id="ts-instituteSi"></div>
+          <div class="tri-row"><div class="tri-tag ta">TA</div><input type="text" id="instituteTa"></div>
+          <div id="ts-instituteTa"></div>
+          <div class="tri-row"><div class="tri-tag en">EN</div><input type="text" id="instituteEn"></div>
+          <div id="ts-instituteEn"></div>
+        </div>
+        <div class="field"><label>Address line (Sinhala / Tamil combined)</label><input type="text" id="addressLocal"></div>
+        <div id="ts-addressLocal"></div>
+        <div class="field"><label>Address line (English)</label><input type="text" id="addressEn"></div>
+        <div id="ts-addressEn"></div>
+      </div>
+
+      <div class="card">
+        <h3>Reference block labels</h3>
+        <p class="note">These are the small "My No / Your No / Date" labels shown in three languages on every letter.</p>
+        <div class="grid3">
+          <div class="tri-group">
+            <div class="tri-title">My No</div>
+            <div class="tri-row"><div class="tri-tag">SI</div><input type="text" id="lblMyNoSi"></div>
+            <div class="tri-row"><div class="tri-tag ta">TA</div><input type="text" id="lblMyNoTa"></div>
+            <div class="tri-row"><div class="tri-tag en">EN</div><input type="text" id="lblMyNoEn"></div>
+          </div>
+          <div class="tri-group">
+            <div class="tri-title">Your No</div>
+            <div class="tri-row"><div class="tri-tag">SI</div><input type="text" id="lblYourNoSi"></div>
+            <div class="tri-row"><div class="tri-tag ta">TA</div><input type="text" id="lblYourNoTa"></div>
+            <div class="tri-row"><div class="tri-tag en">EN</div><input type="text" id="lblYourNoEn"></div>
+          </div>
+          <div class="tri-group">
+            <div class="tri-title">Date</div>
+            <div class="tri-row"><div class="tri-tag">SI</div><input type="text" id="lblDateSi"></div>
+            <div class="tri-row"><div class="tri-tag ta">TA</div><input type="text" id="lblDateTa"></div>
+            <div class="tri-row"><div class="tri-tag en">EN</div><input type="text" id="lblDateEn"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Footer</h3>
+        <div class="grid3">
+          <div class="tri-group">
+            <div class="tri-title">Director General / Head — label</div>
+            <div class="tri-row"><div class="tri-tag">SI</div><input type="text" id="lblDgSi"></div>
+            <div class="tri-row"><div class="tri-tag ta">TA</div><input type="text" id="lblDgTa"></div>
+            <div class="tri-row"><div class="tri-tag en">EN</div><input type="text" id="lblDgEn"></div>
+          </div>
+          <div class="tri-group">
+            <div class="tri-title">Office — label</div>
+            <div class="tri-row"><div class="tri-tag">SI</div><input type="text" id="lblOfficeSi"></div>
+            <div class="tri-row"><div class="tri-tag ta">TA</div><input type="text" id="lblOfficeTa"></div>
+            <div class="tri-row"><div class="tri-tag en">EN</div><input type="text" id="lblOfficeEn"></div>
+          </div>
+          <div class="tri-group">
+            <div class="tri-title">Fax — label</div>
+            <div class="tri-row"><div class="tri-tag">SI</div><input type="text" id="lblFaxSi"></div>
+            <div class="tri-row"><div class="tri-tag ta">TA</div><input type="text" id="lblFaxTa"></div>
+            <div class="tri-row"><div class="tri-tag en">EN</div><input type="text" id="lblFaxEn"></div>
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label>Director General / Head — phone number</label><input type="text" id="footerDG"></div>
+          <div class="field"><label>Office number</label><input type="text" id="footerOffice"></div>
+          <div class="field"><label>Fax</label><input type="text" id="footerFax"></div>
+        </div>
+        <p class="hint" style="margin:-6px 0 12px">These three show as phone numbers under their labels — first column sits at the left edge, last column at the right edge, matching an official letter footer.</p>
+        <div class="grid2">
+          <div class="field"><label>Website</label><input type="text" id="footerWeb"></div>
+          <div class="field"><label>Email</label><input type="text" id="footerEmail"></div>
+        </div>
+      </div>
+
+        </div>
+        <div class="letterhead-preview-col">
+          <div class="mini-preview-sticky">
+            <div class="mini-preview-frame"><div class="paper" id="letterheadPreviewPaper"></div></div>
+            <p class="hint" style="text-align:center;margin-top:10px">Live preview — updates as you edit the fields on the left.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LETTER CONTENT -->
+    <div class="panel" data-panel="content">
+      <h1 class="page-title">Letter content</h1>
+      <p class="page-sub">The wording and programme details used for every recipient. Use <code>{refDate}</code> and <code>{count}</code> placeholders where shown.</p>
+
+      <div class="card">
+        <h3>Subject</h3>
+        <div class="field"><label>Programme / subject title</label><input type="text" id="subjectTitle"></div>
+        <div class="field"><label>Programme date range (shown under subject)</label><input type="text" id="subjectDateRange"></div>
+        <div class="field"><label>Salutation</label><input type="text" id="salutation"></div>
+      </div>
+
+      <div class="card">
+        <h3>Body wording</h3>
+        <div class="field"><label>Reference date (of the institute's original letter)</label><input type="text" id="refLetterDate"></div>
+        <div class="field"><label>Intro paragraph — use {refDate}</label><textarea id="bodyIntro" rows="3"></textarea></div>
+        <div class="field"><label>Confirmation paragraph — use {count} for number of officers</label><textarea id="bodyList" rows="3"></textarea></div>
+        <div class="field"><label>Details intro line</label><input type="text" id="detailsIntro"></div>
+        <div class="field"><label>Closing line</label><input type="text" id="closing"></div>
+      </div>
+
+      <div class="card">
+        <h3>Programme details (defaults — can be overridden per recipient)</h3>
+        <div class="field"><label>Date</label><input type="text" id="programDate"></div>
+        <div class="field"><label>Time</label><input type="text" id="programTime"></div>
+        <div class="field"><label>Venue</label><textarea id="programVenue" rows="2"></textarea></div>
+        <div class="field"><label>Course fee per person (LKR)</label><input type="number" id="feePerPerson" min="0" step="1"></div>
+        <div class="hint">Total fee is calculated automatically as (fee per person × number of officers) for each recipient.</div>
+      </div>
+
+      <div class="card">
+        <h3>Signature</h3>
+        <p class="note">Shown right after the closing line, above the signer's name.</p>
+        <label>Signature image <span class="badge">Optional</span></label>
+        <div id="ctrl-signature"></div>
+        <div class="grid2" style="margin-top:14px">
+          <div class="field"><label>Signer name</label><input type="text" id="signerName"></div>
+          <div class="field"><label>Signer designation</label><input type="text" id="signerTitle"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Reference number (My No)</h3>
+        <div class="grid2">
+          <div class="field"><label>Prefix</label><input type="text" id="myNoPrefix"></div>
+          <div class="field"><label>Starting sequence number</label><input type="number" id="myNoSeq" min="0" step="1"></div>
+        </div>
+        <div class="hint">Each new recipient automatically gets the next number in this sequence. Editable per recipient.</div>
+      </div>
+    </div>
+
+    <!-- RECIPIENTS -->
+    <div class="panel" data-panel="recipients">
+      <h1 class="page-title">Recipients <span class="badge" id="recipCount">0</span></h1>
+      <p class="page-sub">One entry per institution. Each gets its own reference number, address, officer names and letter.</p>
+
+      <div class="toolbar">
+        <button class="btn btn-primary" id="addRecipientBtn">+ Add recipient</button>
+        <button class="btn btn-ghost" id="bulkImportBtn">Paste bulk import</button>
+        <button class="btn btn-ghost" id="excelImportBtn">Upload Excel / CSV</button>
+        <input type="file" id="excelImportInput" accept=".xlsx,.xls,.csv" style="display:none">
+        <button class="btn btn-ghost" id="excelTemplateBtn">Download Excel template</button>
+        <div class="spacer"></div>
+      </div>
+
+      <div id="bulkImportPanel" class="card" style="display:none">
+        <h3>Paste bulk import</h3>
+        <p class="hint" style="margin-bottom:10px">One recipient per line: <b>Institution Name | Address (use / for a new line) | Your No | Officer1, Officer2, Officer3</b></p>
+        <textarea id="bulkImportText" rows="5" placeholder="Institution Name | Address line one / Address line two | REF-2026-01 | A.B.C. Perera, S.M.N. Fernando"></textarea>
+        <div class="row-flex" style="margin-top:10px">
+          <button class="btn btn-primary btn-sm" id="bulkImportApply">Add these recipients</button>
+          <button class="btn btn-ghost btn-sm" id="bulkImportCancel">Cancel</button>
+        </div>
+      </div>
+
+      <div id="recipientsList" class="recipients-list"></div>
+      <div id="recipientsEmpty" class="empty-state" style="display:none">
+        <b>No recipients yet.</b><br>Add your first institution to start building letters.
+      </div>
+    </div>
+
+    <!-- GENERATE -->
+    <div class="panel" data-panel="generate">
+      <h1 class="page-title">Generate & export</h1>
+      <p class="page-sub">Create a PDF for every recipient, then download them all as a ZIP or as one combined file.</p>
+
+      <div class="card">
+        <h3>Live preview</h3>
+        <div class="field">
+          <label>Preview recipient</label>
+          <select id="previewSelect"></select>
+        </div>
+        <div class="preview-wrap"><div class="paper" id="previewPaper"></div></div>
+      </div>
+
+      <div class="card">
+        <h3>Batch generate</h3>
+        <div class="row-flex" style="margin-bottom:14px">
+          <button class="btn btn-primary" id="generateAllBtn">Generate all PDFs</button>
+          <button class="btn btn-gold" id="downloadZipBtn" disabled>Download ZIP (individual PDFs)</button>
+          <button class="btn btn-ghost" id="downloadCombinedBtn" disabled>Download combined PDF</button>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="gen-list" id="genList"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" data-panel="settings">
+      <h1 class="page-title">Settings & backup</h1>
+      <p class="page-sub">Everything here is saved in this browser only. Export a backup file if you're switching computers.</p>
+
+      <div class="card">
+        <h3>Auto-save</h3>
+        <p class="hint">Your work is saved to this browser automatically as you type — nothing to do here.</p>
+      </div>
+
+      <div class="card">
+        <h3>Typography</h3>
+        <div class="field">
+          <label>Letter body font size <span class="size-val" id="typoFontSizeVal"></span></label>
+          <input type="range" id="typoFontSize" min="10" max="17" step="0.5">
+        </div>
+        <div class="field">
+          <label>Line spacing <span class="size-val" id="typoLineHeightVal"></span></label>
+          <input type="range" id="typoLineHeight" min="1.3" max="2.4" step="0.05">
+        </div>
+        <p class="hint">Affects the body paragraph of the generated letter — check the Generate & export preview after adjusting.</p>
+      </div>
+
+      <div class="card">
+        <h3>Letter credit line</h3>
+        <div class="row-flex" style="justify-content:space-between">
+          <div>
+            <div style="font-size:13px;font-weight:600">Show tiny "System by V.P.R. Lakshan Vidanapathirana" line at the bottom of every generated letter</div>
+            <p class="hint" style="margin-top:4px">Very small and faint — won't interfere with the official content. Turn off if you'd rather not include it.</p>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;white-space:nowrap;font-weight:700;font-size:12.5px;color:var(--forest-dark)">
+            <input type="checkbox" id="showCreditToggle" style="width:16px;height:16px">Show
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Automatic backup snapshots</h3>
+        <div class="field">
+          <label>Take a snapshot every</label>
+          <select id="autoBackupInterval">
+            <option value="off">Off</option>
+            <option value="30s">30 seconds</option>
+            <option value="1m">1 minute</option>
+            <option value="5m">5 minutes</option>
+            <option value="30m">30 minutes</option>
+            <option value="1h">1 hour</option>
+            <option value="daily">Once a day</option>
+          </select>
+          <div class="hint">Keeps the last 20 snapshots in this browser so you can roll back if something gets overwritten.</div>
+        </div>
+        <div id="backupHistory"></div>
+      </div>
+
+      <div class="card">
+        <h3>Manual backup</h3>
+        <div class="row-flex">
+          <button class="btn btn-primary" id="exportBackupBtn">Export backup (.json)</button>
+          <button class="btn btn-ghost" id="importBackupBtn">Import backup (.json)</button>
+          <input type="file" id="importBackupInput" accept="application/json" style="display:none">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Reset</h3>
+        <p class="hint" style="margin-bottom:10px">Clears the letterhead, content and all recipients from this browser. Cannot be undone unless you have a backup.</p>
+        <button class="btn btn-danger" id="resetBtn">Reset all data</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="site-footer">RL Letter Generator — Developed by <a href="https://lakshan.vercel.app" target="_blank">V.P.R. Lakshan Vidanapathirana</a></div>
+
+<div id="offscreenHost" class="offscreen"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

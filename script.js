@@ -1,0 +1,853 @@
+/* ============================= DEFAULT STATE ============================= */
+/* All text values below are generic placeholders — replace them with your own
+   organisation's details in the Letterhead / Letter content tabs. */
+const DEFAULT_STATE = {
+  images:{
+    leftLogo:   { data:null, size:66,  x:0, y:0 },
+    rightLogo:  { data:null, size:66,  x:0, y:0 },
+    headerImage:{ data:null, size:100, x:0, y:0 },
+    subHeaderImage:{ data:null, size:100, x:0, y:0 },
+    footerImage:{ data:null, size:100, x:0, y:0 },
+    signature:  { data:null, size:120, x:0, y:0 }
+  },
+  letterhead:{
+    ministry:{ si:"අමාත්‍යාංශයේ නම", ta:"அமைச்சின் பெயர்", en:"Name of Ministry" },
+    institute:{ si:"ආයතනයේ නම", ta:"நிறுவனத்தின் பெயர்", en:"Name of Institute" },
+    addressLocal:"ලිපිනය මෙතන ලියන්න - முகவரி இங்கே",
+    addressEn:"Address line, City, Country.",
+    textStyles:{
+      ministrySi:{ size:11.5, x:0, y:0 },
+      ministryTa:{ size:11.5, x:0, y:0 },
+      ministryEn:{ size:12.5, x:0, y:0 },
+      instituteSi:{ size:13.5, x:0, y:0 },
+      instituteTa:{ size:13.5, x:0, y:0 },
+      instituteEn:{ size:16, x:0, y:0 },
+      addressLocal:{ size:10.5, x:0, y:0 },
+      addressEn:{ size:10, x:0, y:0 }
+    },
+    refLabels:{
+      myNo:{ si:"මගේ අංක", ta:"எனது இல", en:"My No" },
+      yourNo:{ si:"ඔබේ අංක", ta:"உமது இல", en:"Your No" },
+      date:{ si:"දිනය", ta:"திகதி", en:"Date" }
+    },
+    footerLabels:{
+      dg:{ si:"අධ්‍යක්ෂ ජනරාල්", ta:"இயக்குநர் நாயகம்", en:"Director General" },
+      office:{ si:"කාර්යාලය", ta:"அலுவலகம்", en:"Office" },
+      fax:{ si:"ෆැක්ස්", ta:"தொலைநகல்", en:"Fax" }
+    },
+    footerDG:"0XX-XXXXXXX",
+    footerOffice:"0XX-XXXXXXX",
+    footerFax:"0XX-XXXXXXX",
+    footerEmail:"info@example.gov.lk",
+    footerWeb:"www.example.gov.lk"
+  },
+  content:{
+    subjectTitle:"Name of the Programme",
+    subjectDateRange:"2026.01.01 – 2026.01.31",
+    salutation:"මහත්මයාණෙනි / මහත්මියනි,",
+    refLetterDate:"2026.01.01",
+    bodyIntro:"උක්ත පුහුණු වැඩසටහනට අදාළව ඔබ ආයතනය විසින් යොමු කර ඇති {refDate} දිනැති ලිපි හා බැඳේ.",
+    bodyList:"ලිපියෙහි නම් කර එවන ලද නිලධාරීන් ({count}) අදාළ පුහුණු වැඩසටහන සඳහා ලියාපදිංචි කරගන්නා ලද අතර, අදාල දිනයේ දී එම නිලධාරීන් ({count}) ඒ සඳහා සහභාගී කරවන ලෙස කාරුණිකව දන්වා සිටිමි.",
+    detailsIntro:"පුහුණු වැඩසටහනේ තොරතුරු පහත පරිදි වේ.",
+    closing:"මෙයට විශ්වාසී,",
+    programDate:"2026 ජනවාරි 01",
+    programTime:"පෙ.ව. 8.45 සිට ප.ව. 4.30 දක්වා",
+    programVenue:"ආයතනයේ නම, ලිපිනය",
+    feePerPerson:0,
+    signerName:"Full Name,",
+    signerTitle:"Designation",
+    myNoPrefix:"REF/26/",
+    myNoSeq:1
+  },
+  recipients:[
+    {
+      id:"r1", institutionName:"Sample Institution",
+      addressBlock:"Designation of recipient,\nName of Institution,\nDivision / Address",
+      yourNo:"YOUR-REF-001", myNo:"REF/26/1", date:"2026.01.",
+      officers:["A.B.C. Perera","S.M.N. Fernando","K.L.R. Silva"],
+      programDateOverride:"", programTimeOverride:"", programVenueOverride:"", feePerPersonOverride:""
+    }
+  ],
+  settings:{ autoBackupInterval:"off", backupHistory:[], showCredit:true, typography:{ bodyFontSize:13, lineHeight:1.85 } }
+};
+
+const STORE_KEY = "rlLetterGenState_v3";
+let state = loadState();
+let genResults = []; // {recipientId, name, blob}
+let backupTimer = null;
+
+function deepMerge(base, extra){
+  const out = JSON.parse(JSON.stringify(base));
+  if(extra && typeof extra==='object'){
+    Object.keys(extra).forEach(k=>{
+      if(extra[k] && typeof extra[k]==='object' && !Array.isArray(extra[k]) && out[k] && typeof out[k]==='object' && !Array.isArray(out[k])){
+        out[k] = deepMerge(out[k], extra[k]);
+      } else {
+        out[k] = extra[k];
+      }
+    });
+  }
+  return out;
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    return deepMerge(DEFAULT_STATE, JSON.parse(raw));
+  }catch(e){ return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+}
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){ console.warn("Save failed", e); }
+}
+function uid(){ return 'r'+Math.random().toString(36).slice(2,10); }
+
+/* ============================= NAV / TABS ============================= */
+const TABS = [
+  {id:"letterhead", label:"Letterhead"},
+  {id:"content", label:"Letter content"},
+  {id:"recipients", label:"Recipients"},
+  {id:"generate", label:"Generate & export"},
+  {id:"settings", label:"Settings & backup"}
+];
+function buildNav(){
+  const nav = document.getElementById('navList');
+  nav.innerHTML = TABS.map(t=>`<div class="nav-item" data-tab="${t.id}"><span class="dot"></span>${t.label}</div>`).join('')
+    + `<div class="nav-foot">Everything is saved in this browser as you type. Export a backup from <b>Settings</b> before switching computers.</div>`;
+  nav.querySelectorAll('.nav-item').forEach(el=>{
+    el.addEventListener('click', ()=>showTab(el.dataset.tab));
+  });
+}
+function showTab(id){
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.tab===id));
+  document.querySelectorAll('.panel').forEach(el=>el.classList.toggle('active', el.dataset.panel===id));
+  if(id==='generate'){ renderPreviewSelect(); renderPreview(); }
+}
+
+/* ============================= GENERIC IMAGE CONTROL (upload + size + X/Y) ============================= */
+/* Renders an upload dropzone plus size/X/Y sliders into a container for any image in state.images */
+function renderImageControl(containerId, key, opts){
+  opts = opts || {};
+  const img = state.images[key];
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  const unit = opts.unit || 'px';
+  container.innerHTML = `
+    <div class="logo-drop" data-imgkey="${key}">
+      <input type="file" accept="image/*" class="img-input" data-imgkey="${key}">
+      ${img.data ? `<img src="${img.data}"><div class="rm" data-imgkey="${key}">✕</div>` : `<span>${opts.placeholder || 'Click to upload'}</span>`}
+    </div>
+    <div class="img-ctrl-adjust">
+      <div class="field">
+        <label>${opts.sizeLabel || 'Size'} <span class="size-val" data-sizeval="${key}">${img.size}${unit}</span></label>
+        <input type="range" class="img-size" data-imgkey="${key}" min="${opts.min}" max="${opts.max}" step="${opts.step||1}" value="${img.size}">
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Horizontal position (X)</label><input type="range" class="img-x" data-imgkey="${key}" min="-150" max="150" value="${img.x}"></div>
+        <div class="field"><label>Vertical position (Y)</label><input type="range" class="img-y" data-imgkey="${key}" min="-150" max="150" value="${img.y}"></div>
+      </div>
+    </div>
+  `;
+  container.querySelector('.logo-drop').addEventListener('click', e=>{
+    if(e.target.classList.contains('rm')) return;
+    container.querySelector('.img-input').click();
+  });
+  container.querySelector('.img-input').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{ state.images[key].data = ev.target.result; saveState(); renderImageControl(containerId, key, opts); renderPreview(); };
+    reader.readAsDataURL(file);
+  });
+  const rm = container.querySelector('.rm');
+  if(rm) rm.addEventListener('click', e=>{
+    e.stopPropagation();
+    state.images[key].data = null; saveState();
+    renderImageControl(containerId, key, opts); renderPreview();
+  });
+  container.querySelector('.img-size').addEventListener('input', e=>{
+    state.images[key].size = Number(e.target.value);
+    container.querySelector('.size-val').textContent = e.target.value+unit;
+    saveState(); renderPreview();
+  });
+  container.querySelector('.img-x').addEventListener('input', e=>{
+    state.images[key].x = Number(e.target.value); saveState(); renderPreview();
+  });
+  container.querySelector('.img-y').addEventListener('input', e=>{
+    state.images[key].y = Number(e.target.value); saveState(); renderPreview();
+  });
+}
+function initImageControls(){
+  renderImageControl('ctrl-leftLogo', 'leftLogo', {placeholder:'Click to upload logo', sizeLabel:'Size', min:30, max:160});
+  renderImageControl('ctrl-rightLogo', 'rightLogo', {placeholder:'Click to upload logo', sizeLabel:'Size', min:30, max:160});
+  renderImageControl('ctrl-headerImage', 'headerImage', {placeholder:'Click to upload (replaces logos + org name)', sizeLabel:'Width', unit:'%', min:30, max:100});
+  renderImageControl('ctrl-subHeaderImage', 'subHeaderImage', {placeholder:'Click to upload (shown below header)', sizeLabel:'Width', unit:'%', min:20, max:100});
+  renderImageControl('ctrl-footerImage', 'footerImage', {placeholder:'Click to upload (replaces footer block)', sizeLabel:'Width', unit:'%', min:20, max:100});
+  renderImageControl('ctrl-signature', 'signature', {placeholder:'Click to upload signature', sizeLabel:'Size', min:50, max:260});
+}
+
+/* Per-line text style controls (size / X / Y) for the organisation-name block */
+const TEXT_STYLE_KEYS = ['ministrySi','ministryTa','ministryEn','instituteSi','instituteTa','instituteEn','addressLocal','addressEn'];
+function renderTextStyleControl(key){
+  const container = document.getElementById('ts-'+key);
+  if(!container) return;
+  const st = state.letterhead.textStyles[key];
+  container.innerHTML = `
+    <div class="ts-row">
+      <label>Size <input type="number" class="ts-size" value="${st.size}" step="0.5" min="6" max="40"></label>
+      <label>X <input type="number" class="ts-x" value="${st.x}" step="1"></label>
+      <label>Y <input type="number" class="ts-y" value="${st.y}" step="1"></label>
+    </div>`;
+  container.querySelector('.ts-size').addEventListener('input', e=>{ st.size=Number(e.target.value); saveState(); renderPreview(); });
+  container.querySelector('.ts-x').addEventListener('input', e=>{ st.x=Number(e.target.value); saveState(); renderPreview(); });
+  container.querySelector('.ts-y').addEventListener('input', e=>{ st.y=Number(e.target.value); saveState(); renderPreview(); });
+}
+function initTextStyleControls(){
+  TEXT_STYLE_KEYS.forEach(renderTextStyleControl);
+}
+
+/* ============================= LETTERHEAD TEXT BINDINGS ============================= */
+function triField(id, obj, key){
+  document.getElementById(id).value = obj[key];
+  document.getElementById(id).addEventListener('input', e=>{ obj[key]=e.target.value; saveState(); renderPreview(); });
+}
+function bindLetterhead(){
+  const L = state.letterhead;
+  triField('ministrySi', L.ministry,'si'); triField('ministryTa', L.ministry,'ta'); triField('ministryEn', L.ministry,'en');
+  triField('instituteSi', L.institute,'si'); triField('instituteTa', L.institute,'ta'); triField('instituteEn', L.institute,'en');
+  document.getElementById('addressLocal').value = L.addressLocal;
+  document.getElementById('addressLocal').addEventListener('input', e=>{ L.addressLocal=e.target.value; saveState(); renderPreview(); });
+  document.getElementById('addressEn').value = L.addressEn;
+  document.getElementById('addressEn').addEventListener('input', e=>{ L.addressEn=e.target.value; saveState(); renderPreview(); });
+
+  triField('lblMyNoSi', L.refLabels.myNo,'si'); triField('lblMyNoTa', L.refLabels.myNo,'ta'); triField('lblMyNoEn', L.refLabels.myNo,'en');
+  triField('lblYourNoSi', L.refLabels.yourNo,'si'); triField('lblYourNoTa', L.refLabels.yourNo,'ta'); triField('lblYourNoEn', L.refLabels.yourNo,'en');
+  triField('lblDateSi', L.refLabels.date,'si'); triField('lblDateTa', L.refLabels.date,'ta'); triField('lblDateEn', L.refLabels.date,'en');
+
+  triField('lblDgSi', L.footerLabels.dg,'si'); triField('lblDgTa', L.footerLabels.dg,'ta'); triField('lblDgEn', L.footerLabels.dg,'en');
+  triField('lblOfficeSi', L.footerLabels.office,'si'); triField('lblOfficeTa', L.footerLabels.office,'ta'); triField('lblOfficeEn', L.footerLabels.office,'en');
+  triField('lblFaxSi', L.footerLabels.fax,'si'); triField('lblFaxTa', L.footerLabels.fax,'ta'); triField('lblFaxEn', L.footerLabels.fax,'en');
+
+  ['footerDG','footerOffice','footerFax','footerEmail','footerWeb'].forEach(fld=>{
+    document.getElementById(fld).value = L[fld];
+    document.getElementById(fld).addEventListener('input', e=>{ L[fld]=e.target.value; saveState(); renderPreview(); });
+  });
+
+  initImageControls();
+  initTextStyleControls();
+}
+
+/* ============================= CONTENT BINDINGS ============================= */
+function bindContent(){
+  const C = state.content;
+  const map = {
+    subjectTitle:'subjectTitle', subjectDateRange:'subjectDateRange', salutation:'salutation',
+    refLetterDate:'refLetterDate', bodyIntro:'bodyIntro', bodyList:'bodyList', detailsIntro:'detailsIntro',
+    closing:'closing', programDate:'programDate', programTime:'programTime', programVenue:'programVenue',
+    feePerPerson:'feePerPerson', signerName:'signerName', signerTitle:'signerTitle',
+    myNoPrefix:'myNoPrefix', myNoSeq:'myNoSeq'
+  };
+  Object.keys(map).forEach(id=>{
+    const el = document.getElementById(id);
+    el.value = C[map[id]];
+    el.addEventListener('input', ()=>{
+      const v = el.type==='number' ? Number(el.value||0) : el.value;
+      state.content[map[id]] = v; saveState();
+      if(id==='feePerPerson') renderRecipients();
+      renderPreview();
+    });
+  });
+}
+
+/* ============================= RECIPIENTS ============================= */
+function calcFee(rec){
+  if(rec.includeOfficers===false) return {per:0, count:0, total:0};
+  const per = rec.feePerPersonOverride!=='' && rec.feePerPersonOverride!=null ? Number(rec.feePerPersonOverride) : Number(state.content.feePerPerson||0);
+  const count = rec.officers.filter(o=>o.trim()!=='').length || 0;
+  return {per, count, total: per*count};
+}
+function fmtMoney(n){ return Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+function nextMyNo(){
+  const seq = Number(state.content.myNoSeq||0) + state.recipients.length;
+  return state.content.myNoPrefix + seq;
+}
+function addRecipient(){
+  const rec = {
+    id:uid(), institutionName:"", addressBlock:"", yourNo:"",
+    myNo: nextMyNo(), date:new Date().toISOString().slice(0,10).replace(/-/g,'.'),
+    officers:[""], programDateOverride:"", programTimeOverride:"", programVenueOverride:"", feePerPersonOverride:""
+  };
+  state.recipients.push(rec); saveState(); renderRecipients();
+  setTimeout(()=>{ const els=document.querySelectorAll('.recipient-card'); if(els.length){ els[els.length-1].classList.add('open'); els[els.length-1].scrollIntoView({behavior:'smooth', block:'center'}); } }, 30);
+}
+function removeRecipient(id){
+  if(!confirm('Remove this recipient?')) return;
+  state.recipients = state.recipients.filter(r=>r.id!==id); saveState(); renderRecipients();
+}
+function duplicateRecipient(id){
+  const rec = state.recipients.find(r=>r.id===id); if(!rec) return;
+  const clone = JSON.parse(JSON.stringify(rec)); clone.id = uid(); clone.myNo = nextMyNo();
+  state.recipients.push(clone); saveState(); renderRecipients();
+}
+
+function renderRecipients(){
+  const list = document.getElementById('recipientsList');
+  const empty = document.getElementById('recipientsEmpty');
+  document.getElementById('recipCount').textContent = state.recipients.length;
+  if(state.recipients.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  const openIds = new Set([...list.querySelectorAll('.recipient-card.open')].map(el=>el.dataset.id));
+
+  list.innerHTML = state.recipients.map((rec,i)=>{
+    const fee = calcFee(rec);
+    return `
+    <div class="recipient-card ${openIds.has(rec.id)?'open':''}" data-id="${rec.id}">
+      <div class="recipient-head" data-toggle="${rec.id}">
+        <div class="idx">${i+1}</div>
+        <div class="title">${rec.institutionName || 'Untitled institution'}</div>
+        <div class="meta">${fee.count} officer(s) · Rs. ${fmtMoney(fee.total)}</div>
+        <div class="chev">›</div>
+      </div>
+      <div class="recipient-body">
+        <div class="grid2">
+          <div class="field"><label>Institution name (for file naming)</label><input type="text" data-f="institutionName" value="${escAttr(rec.institutionName)}"></div>
+          <div class="field"><label>Your No</label><input type="text" data-f="yourNo" value="${escAttr(rec.yourNo)}"></div>
+        </div>
+        <div class="field"><label>Recipient designation & address block</label><textarea data-f="addressBlock" rows="3">${escHtml(rec.addressBlock)}</textarea></div>
+        <div class="grid2">
+          <div class="field"><label>My No</label><input type="text" data-f="myNo" value="${escAttr(rec.myNo)}"></div>
+          <div class="field"><label>Date</label><input type="text" data-f="date" value="${escAttr(rec.date)}"></div>
+        </div>
+
+        <div class="grid2" style="align-items:start">
+          <div class="rec-section">
+            <div class="rec-section-head">
+              <label>Officers attending</label>
+              <button class="btn btn-ghost btn-sm toggle-officers">${rec.includeOfficers===false?'+ Add section':'Remove section'}</button>
+            </div>
+            ${rec.includeOfficers===false ? `<div class="rec-section-empty">Not included — this letter will have no officer list, confirmation line or fee row.</div>` : `
+            <div class="officer-list" data-officers="${rec.id}">
+              ${rec.officers.map((o,oi)=>`
+                <div class="officer-row">
+                  <input type="text" data-officer-idx="${oi}" value="${escAttr(o)}" placeholder="Officer full name">
+                  <div class="icon-btn rm-officer" data-oidx="${oi}">✕</div>
+                </div>`).join('')}
+            </div>
+            <button class="btn btn-ghost btn-sm add-officer" style="margin-top:4px">+ Add officer</button>
+            `}
+          </div>
+
+          <div class="rec-section">
+            <div class="rec-section-head">
+              <label>Override programme details (optional)</label>
+              <button class="btn btn-ghost btn-sm toggle-overrides">${rec.showOverrides===false?'+ Add section':'Remove section'}</button>
+            </div>
+            ${rec.showOverrides===false ? `<div class="rec-section-empty">Using the default programme date/time/venue/fee from Letter content.</div>` : `
+            <div class="field"><label>Date override</label><input type="text" data-f="programDateOverride" value="${escAttr(rec.programDateOverride)}" placeholder="${escAttr(state.content.programDate)}"></div>
+            <div class="field"><label>Time override</label><input type="text" data-f="programTimeOverride" value="${escAttr(rec.programTimeOverride)}" placeholder="${escAttr(state.content.programTime)}"></div>
+            <div class="field"><label>Venue override</label><input type="text" data-f="programVenueOverride" value="${escAttr(rec.programVenueOverride)}" placeholder="${escAttr(state.content.programVenue)}"></div>
+            <div class="field"><label>Fee per person override (LKR)</label><input type="number" data-f="feePerPersonOverride" value="${escAttr(rec.feePerPersonOverride)}" placeholder="${state.content.feePerPerson}"></div>
+            `}
+          </div>
+        </div>
+
+        <div class="fee-preview">Total course fee: <b>Rs. ${fmtMoney(fee.total)}.00</b> (per person Rs. ${fmtMoney(fee.per)}.00 × ${fee.count})</div>
+
+        <div class="row-flex" style="margin-top:14px">
+          <button class="btn btn-ghost btn-sm dup-rec">Duplicate</button>
+          <button class="btn btn-danger btn-sm del-rec">Remove recipient</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.recipient-head').forEach(h=>{
+    h.addEventListener('click', ()=>{ h.closest('.recipient-card').classList.toggle('open'); });
+  });
+  list.querySelectorAll('[data-f]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const card = e.target.closest('.recipient-card');
+      const rec = state.recipients.find(r=>r.id===card.dataset.id);
+      const f = e.target.dataset.f;
+      rec[f] = e.target.value;
+      saveState();
+      if(f==='institutionName'){ card.querySelector('.title').textContent = e.target.value || 'Untitled institution'; }
+    });
+  });
+  list.querySelectorAll('[data-officer-idx]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const card = e.target.closest('.recipient-card');
+      const rec = state.recipients.find(r=>r.id===card.dataset.id);
+      rec.officers[Number(e.target.dataset.officerIdx)] = e.target.value;
+      saveState();
+      const fee = calcFee(rec);
+      card.querySelector('.meta').textContent = `${fee.count} officer(s) · Rs. ${fmtMoney(fee.total)}`;
+      card.querySelector('.fee-preview').innerHTML = `Total course fee: <b>Rs. ${fmtMoney(fee.total)}.00</b> (per person Rs. ${fmtMoney(fee.per)}.00 × ${fee.count})`;
+    });
+  });
+  list.querySelectorAll('.rm-officer').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const card = e.target.closest('.recipient-card');
+      const rec = state.recipients.find(r=>r.id===card.dataset.id);
+      const idx = Number(e.target.dataset.oidx);
+      if(rec.officers.length<=1){ rec.officers=[""]; } else { rec.officers.splice(idx,1); }
+      saveState(); renderRecipients();
+      card2open(rec.id);
+    });
+  });
+  list.querySelectorAll('.add-officer').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const card = e.target.closest('.recipient-card');
+      const rec = state.recipients.find(r=>r.id===card.dataset.id);
+      rec.officers.push(""); saveState(); renderRecipients();
+      card2open(rec.id);
+    });
+  });
+  list.querySelectorAll('.toggle-officers').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const card = e.target.closest('.recipient-card');
+      const rec = state.recipients.find(r=>r.id===card.dataset.id);
+      rec.includeOfficers = rec.includeOfficers===false ? true : false;
+      if(rec.includeOfficers && (!rec.officers || rec.officers.length===0)) rec.officers=[""];
+      saveState(); renderRecipients(); card2open(rec.id); renderPreview();
+    });
+  });
+  list.querySelectorAll('.toggle-overrides').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const card = e.target.closest('.recipient-card');
+      const rec = state.recipients.find(r=>r.id===card.dataset.id);
+      rec.showOverrides = rec.showOverrides===false ? true : false;
+      saveState(); renderRecipients(); card2open(rec.id);
+    });
+  });
+  list.querySelectorAll('.del-rec').forEach(btn=>{
+    btn.addEventListener('click', e=>{ removeRecipient(e.target.closest('.recipient-card').dataset.id); });
+  });
+  list.querySelectorAll('.dup-rec').forEach(btn=>{
+    btn.addEventListener('click', e=>{ duplicateRecipient(e.target.closest('.recipient-card').dataset.id); });
+  });
+}
+function card2open(id){ setTimeout(()=>{ const el=document.querySelector(`.recipient-card[data-id="${id}"]`); if(el) el.classList.add('open'); },30); }
+
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s){ return (s===undefined||s===null? '': String(s)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+/* Bulk import (paste) */
+function bindBulkImport(){
+  document.getElementById('bulkImportBtn').addEventListener('click', ()=>{
+    document.getElementById('bulkImportPanel').style.display='block';
+  });
+  document.getElementById('bulkImportCancel').addEventListener('click', ()=>{
+    document.getElementById('bulkImportPanel').style.display='none';
+  });
+  document.getElementById('bulkImportApply').addEventListener('click', ()=>{
+    const text = document.getElementById('bulkImportText').value.trim();
+    if(!text) return;
+    const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+    lines.forEach(line=>{
+      const parts = line.split('|').map(p=>p.trim());
+      const [inst, addr, yourNo, officersStr] = parts;
+      addRecipientFromParts(inst, addr, yourNo, officersStr);
+    });
+    saveState(); renderRecipients();
+    document.getElementById('bulkImportText').value='';
+    document.getElementById('bulkImportPanel').style.display='none';
+    showTab('recipients');
+  });
+}
+function addRecipientFromParts(inst, addr, yourNo, officersStr){
+  const rec = {
+    id:uid(), institutionName: inst||'', addressBlock:(addr||'').split('/').map(s=>s.trim()).join('\n'),
+    yourNo: yourNo||'', myNo: nextMyNo(), date:new Date().toISOString().slice(0,10).replace(/-/g,'.'),
+    officers: (officersStr||'').split(/[,;]/).map(s=>s.trim()).filter(Boolean),
+    programDateOverride:"", programTimeOverride:"", programVenueOverride:"", feePerPersonOverride:""
+  };
+  if(rec.officers.length===0) rec.officers=[""];
+  state.recipients.push(rec);
+}
+
+/* Bulk import (Excel / CSV) */
+function bindExcelImport(){
+  document.getElementById('excelImportBtn').addEventListener('click', ()=> document.getElementById('excelImportInput').click());
+  document.getElementById('excelImportInput').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      try{
+        const wb = XLSX.read(ev.target.result, {type:'binary'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+        if(!rows.length){ alert('That file has no data rows.'); return; }
+        let added = 0;
+        rows.forEach(row=>{
+          const keys = Object.keys(row).reduce((m,k)=>{ m[k.toLowerCase().trim()] = row[k]; return m; }, {});
+          const inst = keys['institution name'] || keys['institution'] || keys['name'] || '';
+          const addr = keys['address'] || '';
+          const yourNo = keys['your no'] || keys['yourno'] || keys['reference'] || '';
+          const officers = keys['officers'] || keys['officer names'] || keys['names'] || '';
+          if(!inst && !addr && !officers) return;
+          addRecipientFromParts(inst, String(addr).split('\n').join('/'), yourNo, officers);
+          added++;
+        });
+        saveState(); renderRecipients(); showTab('recipients');
+        alert(added + ' recipient(s) imported.');
+      }catch(err){ console.error(err); alert('Could not read that file. Please use the downloadable template format.'); }
+      document.getElementById('excelImportInput').value='';
+    };
+    reader.readAsBinaryString(file);
+  });
+  document.getElementById('excelTemplateBtn').addEventListener('click', ()=>{
+    const wsData = [
+      ['Institution Name','Address','Your No','Officers'],
+      ['Sample Institution','Designation, Division\nCity','YOUR-REF-001','A.B.C. Perera, S.M.N. Fernando']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Recipients');
+    XLSX.writeFile(wb, 'RL_Letter_Generator_Recipients_Template.xlsx');
+  });
+}
+
+/* ============================= LETTER RENDERING ============================= */
+function formatAddressBlock(text){
+  // Break onto a new line after every comma, in addition to any manual line breaks the user typed.
+  return (text||'').split('\n').map(line=> line.replace(/,\s*/g, ',\n')).join('\n');
+}
+function refCell(label, value){
+  return `<div class="ref-cell">
+    <div class="ref-labels"><span>${escHtml(label.si)}</span><span>${escHtml(label.ta)}</span><span class="en">${escHtml(label.en)}</span></div>
+    <span class="ref-brace">}</span>
+    <span class="ref-val">${escHtml(value)}</span>
+  </div>`;
+}
+function footerCol(label, value){
+  return `<div class="fcol">
+    <div class="flabels"><div>${escHtml(label.si)}</div><div>${escHtml(label.ta)}</div><div class="en">${escHtml(label.en)}</div></div>
+    <div class="fval">${escHtml(value)}</div>
+  </div>`;
+}
+function imgStyle(img, extra){
+  return `width:${img.size}${extra&&extra.pct?'%':'px'};transform:translate(${img.x}px,${img.y}px);${extra&&extra.css?extra.css:''}`;
+}
+function logoAnchorStyle(img){
+  // Anchored to the centre of a fixed-size box, so changing size/X/Y never reflows sibling content.
+  return `width:${img.size}px;transform:translate(-50%,-50%) translate(${img.x}px,${img.y}px);`;
+}
+function textStyleAttr(key){
+  const st = state.letterhead.textStyles && state.letterhead.textStyles[key];
+  if(!st) return '';
+  return `style="font-size:${st.size}px;transform:translate(${st.x}px,${st.y}px);"`;
+}
+function buildLetterHTML(rec){
+  const L = state.letterhead, C = state.content, IMG = state.images;
+  const fee = calcFee(rec);
+  const introText = C.bodyIntro.replace(/{refDate}/g, C.refLetterDate);
+  const listText = C.bodyList.replace(/{count}/g, fee.count);
+  const pDate = rec.programDateOverride || C.programDate;
+  const pTime = rec.programTimeOverride || C.programTime;
+  const pVenue = rec.programVenueOverride || C.programVenue;
+
+  const headerBlock = IMG.headerImage.data
+    ? `<img class="lt-header-img" src="${IMG.headerImage.data}" style="${imgStyle(IMG.headerImage,{pct:true})}">`
+    : `<div class="lt-header">
+        <div class="logo-box">${IMG.leftLogo.data?`<img src="${IMG.leftLogo.data}" style="${logoAnchorStyle(IMG.leftLogo)}">`:''}</div>
+        <div class="lt-org">
+          <div class="t1" ${textStyleAttr('ministrySi')}>${escHtml(L.ministry.si)}</div>
+          <div class="t1" ${textStyleAttr('ministryTa')}>${escHtml(L.ministry.ta)}</div>
+          <div class="t1-en" ${textStyleAttr('ministryEn')}>${escHtml(L.ministry.en)}</div>
+          <div class="t2" ${textStyleAttr('instituteSi')}>${escHtml(L.institute.si)}</div>
+          <div class="t2" ${textStyleAttr('instituteTa')}>${escHtml(L.institute.ta)}</div>
+          <div class="t2-en" ${textStyleAttr('instituteEn')}>${escHtml(L.institute.en)}</div>
+        </div>
+        <div class="logo-box">${IMG.rightLogo.data?`<img src="${IMG.rightLogo.data}" style="${logoAnchorStyle(IMG.rightLogo)}">`:''}</div>
+      </div>
+      <div class="lt-addr" ${textStyleAttr('addressLocal')}>${escHtml(L.addressLocal)}</div>
+      <div class="lt-addr-en" ${textStyleAttr('addressEn')}>${escHtml(L.addressEn)}</div>`;
+
+  const subHeaderBlock = IMG.subHeaderImage.data
+    ? `<img class="lt-subheader-img" src="${IMG.subHeaderImage.data}" style="${imgStyle(IMG.subHeaderImage,{pct:true})}">` : '';
+
+  const footerBlock = IMG.footerImage.data
+    ? `<hr class="lt-footer-rule"><img class="lt-footer-img" src="${IMG.footerImage.data}" style="${imgStyle(IMG.footerImage,{pct:true})}">`
+    : `<hr class="lt-footer-rule">
+      <div class="lt-footer-cols">
+        ${footerCol(L.footerLabels.dg, L.footerDG)}
+        ${footerCol(L.footerLabels.office, L.footerOffice)}
+        ${footerCol(L.footerLabels.fax, L.footerFax)}
+      </div>
+      <div class="lt-footer-bottom"><span>Website : ${escHtml(L.footerWeb)}</span><span>E-mail : ${escHtml(L.footerEmail)}</span></div>`;
+
+  const signatureImg = IMG.signature.data
+    ? `<img class="lt-signature-img" src="${IMG.signature.data}" style="${imgStyle(IMG.signature)}">` : '';
+
+  return `
+  <div class="lt-top">
+    ${headerBlock}
+    <hr class="lt-rule">
+    ${subHeaderBlock}
+    <div class="lt-ref">
+      ${refCell(L.refLabels.myNo, rec.myNo)}
+      ${refCell(L.refLabels.yourNo, rec.yourNo)}
+      ${refCell(L.refLabels.date, rec.date)}
+    </div>
+    <div class="lt-body">
+      <div class="lt-addr-block" style="white-space:pre-line">${escHtml(formatAddressBlock(rec.addressBlock))}</div>
+      <div style="margin-bottom:14px">${escHtml(C.salutation)}</div>
+      <div class="en-title">${escHtml(C.subjectTitle)}</div>
+      <div class="range">${escHtml(C.subjectDateRange)}</div>
+      <p>${escHtml(introText)}</p>
+      ${rec.includeOfficers!==false ? `
+      <p>${escHtml(listText)}</p>
+      <div class="lt-names">
+        ${rec.officers.filter(o=>o.trim()!=='').map((o,i)=>`<div>${String(i+1).padStart(2,'0')}. ${escHtml(o)}</div>`).join('')}
+      </div>` : ''}
+      <p>${escHtml(C.detailsIntro)}</p>
+      <div class="lt-details">
+        <table>
+          <tr><td class="k">${escHtml(L.refLabels.date.si)}</td><td>- ${escHtml(pDate)}</td></tr>
+          <tr><td class="k">Time</td><td>- ${escHtml(pTime)}</td></tr>
+          <tr><td class="k">Venue</td><td>- ${escHtml(pVenue)}</td></tr>
+          ${rec.includeOfficers!==false ? `<tr><td class="k">Fee</td><td>- Rs.${fmtMoney(fee.total)} (per person Rs.${fmtMoney(fee.per)})</td></tr>` : ''}
+        </table>
+      </div>
+      <p>${escHtml(C.closing)}</p>
+      <div class="lt-sign">
+        ${signatureImg}
+        <div>${escHtml(C.signerName)}</div>
+        <div>${escHtml(C.signerTitle)}</div>
+      </div>
+    </div>
+  </div>
+  <div class="lt-bottom">
+    ${footerBlock}
+    ${state.settings.showCredit ? '<div class="lt-credit">System by V.P.R. Lakshan Vidanapathirana</div>' : ''}
+  </div>
+  `;
+}
+
+function renderPreviewSelect(){
+  const sel = document.getElementById('previewSelect');
+  sel.innerHTML = state.recipients.map(r=>`<option value="${r.id}">${escHtml(r.institutionName||'Untitled')}</option>`).join('') || '<option disabled>No recipients yet</option>';
+}
+function applyTypography(paperEl){
+  const t = state.settings.typography || {bodyFontSize:13, lineHeight:1.85};
+  paperEl.style.setProperty('--lt-fs', t.bodyFontSize+'px');
+  paperEl.style.setProperty('--lt-lh', t.lineHeight);
+}
+function renderPreview(){
+  const rec = getPreviewRecipient();
+  const html = rec ? buildLetterHTML(rec) : '<p style="text-align:center;color:#999;margin-top:100px">Add a recipient to preview a letter.</p>';
+  ['previewPaper','letterheadPreviewPaper'].forEach(id=>{
+    const paper = document.getElementById(id);
+    if(!paper) return;
+    applyTypography(paper);
+    paper.innerHTML = html;
+  });
+}
+function getPreviewRecipient(){
+  const sel = document.getElementById('previewSelect');
+  if(sel && sel.value){
+    const found = state.recipients.find(r=>r.id===sel.value);
+    if(found) return found;
+  }
+  return state.recipients[0];
+}
+
+/* ============================= PDF GENERATION ============================= */
+async function renderRecipientToCanvas(rec){
+  const host = document.getElementById('offscreenHost');
+  host.innerHTML = '';
+  const paper = document.createElement('div');
+  paper.className = 'paper for-pdf';
+  paper.style.boxShadow = 'none';
+  applyTypography(paper);
+  paper.innerHTML = buildLetterHTML(rec);
+  host.appendChild(paper);
+  await new Promise(r=>setTimeout(r, 60)); // allow fonts/images to settle
+  const canvas = await html2canvas(paper, {scale:2, useCORS:true, backgroundColor:'#ffffff'});
+  host.innerHTML = '';
+  return canvas;
+}
+async function canvasToPdfBlob(canvas){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','mm','a4');
+  const pageW = 210, pageH = 297;
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  pdf.addImage(imgData,'JPEG',0,0,pageW,pageH);
+  return pdf.output('blob');
+}
+function safeFileName(s){ return (s||'letter').replace(/[^a-zA-Z0-9_\-\u0D80-\u0DFF\u0B80-\u0BFF ]/g,'').trim().replace(/\s+/g,'_').slice(0,60) || 'letter'; }
+
+async function generateAll(){
+  if(state.recipients.length===0){ alert('Add at least one recipient first.'); return; }
+  const btn = document.getElementById('generateAllBtn'); btn.disabled = true;
+  document.getElementById('downloadZipBtn').disabled = true;
+  document.getElementById('downloadCombinedBtn').disabled = true;
+  genResults = [];
+  const genList = document.getElementById('genList');
+  genList.innerHTML = state.recipients.map(r=>`<div class="gen-row" data-id="${r.id}"><div class="name">${escHtml(r.institutionName||'Untitled')}</div><div class="status">Waiting…</div></div>`).join('');
+  const bar = document.getElementById('progressBar');
+
+  for(let i=0;i<state.recipients.length;i++){
+    const rec = state.recipients[i];
+    const row = genList.querySelector(`.gen-row[data-id="${rec.id}"]`);
+    row.querySelector('.status').textContent = 'Rendering…';
+    try{
+      const canvas = await renderRecipientToCanvas(rec);
+      const blob = await canvasToPdfBlob(canvas);
+      genResults.push({id:rec.id, name: safeFileName(rec.institutionName)+'.pdf', blob});
+      row.classList.add('done');
+      row.querySelector('.status').textContent = 'Done ✓';
+    }catch(e){
+      row.querySelector('.status').textContent = 'Failed';
+      console.error(e);
+    }
+    bar.style.width = Math.round(((i+1)/state.recipients.length)*100)+'%';
+  }
+  btn.disabled = false;
+  if(genResults.length){
+    document.getElementById('downloadZipBtn').disabled = false;
+    document.getElementById('downloadCombinedBtn').disabled = false;
+  }
+}
+
+async function downloadZip(){
+  if(!genResults.length) return;
+  const zip = new JSZip();
+  genResults.forEach(r=> zip.file(r.name, r.blob));
+  const blob = await zip.generateAsync({type:'blob'});
+  triggerDownload(blob, 'RL_Letters_'+Date.now()+'.zip');
+}
+async function downloadCombined(){
+  if(!genResults.length) return;
+  const { jsPDF } = window.jspdf;
+  const combined = new jsPDF('p','mm','a4');
+  for(let i=0;i<state.recipients.length;i++){
+    const rec = state.recipients[i];
+    const canvas = await renderRecipientToCanvas(rec);
+    const imgData = canvas.toDataURL('image/jpeg',0.95);
+    if(i>0) combined.addPage();
+    combined.addImage(imgData,'JPEG',0,0,210,297);
+  }
+  triggerDownload(combined.output('blob'), 'RL_Letters_Combined_'+Date.now()+'.pdf');
+}
+function triggerDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+
+/* ============================= SETTINGS / BACKUP ============================= */
+function bindSettings(){
+  const t = state.settings.typography || {bodyFontSize:13, lineHeight:1.85};
+  const fsEl = document.getElementById('typoFontSize');
+  const fsVal = document.getElementById('typoFontSizeVal');
+  const lhEl = document.getElementById('typoLineHeight');
+  const lhVal = document.getElementById('typoLineHeightVal');
+  fsEl.value = t.bodyFontSize; fsVal.textContent = t.bodyFontSize+'px';
+  lhEl.value = t.lineHeight; lhVal.textContent = t.lineHeight;
+  fsEl.addEventListener('input', ()=>{
+    state.settings.typography.bodyFontSize = Number(fsEl.value);
+    fsVal.textContent = fsEl.value+'px';
+    saveState(); renderPreview();
+  });
+  lhEl.addEventListener('input', ()=>{
+    state.settings.typography.lineHeight = Number(lhEl.value);
+    lhVal.textContent = lhEl.value;
+    saveState(); renderPreview();
+  });
+
+  const creditToggle = document.getElementById('showCreditToggle');
+  creditToggle.checked = state.settings.showCredit !== false;
+  creditToggle.addEventListener('change', ()=>{
+    state.settings.showCredit = creditToggle.checked; saveState(); renderPreview();
+  });
+
+  const sel = document.getElementById('autoBackupInterval');
+  sel.value = state.settings.autoBackupInterval;
+  sel.addEventListener('change', ()=>{
+    state.settings.autoBackupInterval = sel.value; saveState(); setupAutoBackup();
+  });
+  document.getElementById('exportBackupBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+    triggerDownload(blob, 'rl-letter-generator-backup_'+Date.now()+'.json');
+  });
+  document.getElementById('importBackupBtn').addEventListener('click', ()=> document.getElementById('importBackupInput').click());
+  document.getElementById('importBackupInput').addEventListener('change', e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      try{
+        const data = JSON.parse(ev.target.result);
+        state = deepMerge(DEFAULT_STATE, data);
+        saveState(); renderAll();
+        alert('Backup imported successfully.');
+      }catch(err){ alert('Could not read that file — please choose a valid backup .json'); }
+    };
+    reader.readAsText(file);
+  });
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    if(!confirm('This clears all letterhead, content and recipient data from this browser. Continue?')) return;
+    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+    saveState(); renderAll();
+  });
+  renderBackupHistory();
+}
+function setupAutoBackup(){
+  if(backupTimer){ clearInterval(backupTimer); backupTimer=null; }
+  const iv = state.settings.autoBackupInterval;
+  const ms = {'30s':30000,'1m':60000,'5m':300000,'30m':1800000,'1h':3600000,'daily':86400000}[iv];
+  if(!ms) return;
+  backupTimer = setInterval(()=>{
+    const snap = { timestamp: Date.now(), data: JSON.parse(JSON.stringify({images:state.images, letterhead:state.letterhead, content:state.content, recipients:state.recipients})) };
+    state.settings.backupHistory.unshift(snap);
+    state.settings.backupHistory = state.settings.backupHistory.slice(0,20);
+    saveState(); renderBackupHistory();
+  }, ms);
+}
+function renderBackupHistory(){
+  const wrap = document.getElementById('backupHistory');
+  const hist = state.settings.backupHistory||[];
+  if(hist.length===0){ wrap.innerHTML = '<p class="hint">No snapshots yet.</p>'; return; }
+  wrap.innerHTML = hist.map((h,i)=>`
+    <div class="backup-item">
+      <div class="t"><b>${new Date(h.timestamp).toLocaleString()}</b>${h.data.recipients.length} recipient(s)</div>
+      <button class="btn btn-ghost btn-sm restore-snap" data-i="${i}">Restore</button>
+    </div>`).join('');
+  wrap.querySelectorAll('.restore-snap').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const i = Number(e.target.dataset.i);
+      if(!confirm('Restore this snapshot? Current unsaved changes to images/letterhead/content/recipients will be replaced.')) return;
+      const snap = state.settings.backupHistory[i];
+      if(snap.data.images) state.images = snap.data.images;
+      state.letterhead = snap.data.letterhead; state.content = snap.data.content; state.recipients = snap.data.recipients;
+      saveState(); renderAll();
+    });
+  });
+}
+
+/* ============================= INIT ============================= */
+function renderAll(){
+  bindLetterhead(); bindContent(); renderRecipients(); renderPreviewSelect(); renderPreview(); renderBackupHistory();
+}
+function init(){
+  buildNav();
+  showTab('letterhead');
+  bindLetterhead();
+  bindContent();
+  renderRecipients();
+  bindBulkImport();
+  bindExcelImport();
+  renderPreviewSelect();
+  renderPreview();
+  document.getElementById('addRecipientBtn').addEventListener('click', addRecipient);
+  document.getElementById('previewSelect').addEventListener('change', renderPreview);
+  document.getElementById('generateAllBtn').addEventListener('click', generateAll);
+  document.getElementById('downloadZipBtn').addEventListener('click', downloadZip);
+  document.getElementById('downloadCombinedBtn').addEventListener('click', downloadCombined);
+  bindSettings();
+  setupAutoBackup();
+  window.addEventListener('beforeunload', saveState);
+}
+init();
