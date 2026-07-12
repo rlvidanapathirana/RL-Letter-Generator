@@ -57,7 +57,18 @@ const DEFAULT_STATE = {
     signerName:"Full Name,",
     signerTitle:"Designation",
     myNoPrefix:"REF/26/",
-    myNoSeq:1
+    myNoSeq:1,
+    textStyles:{
+      subjectTitle:{ size:13.5, x:0, y:0 },
+      subjectDateRange:{ size:13, x:0, y:0 },
+      salutation:{ size:13, x:0, y:0 },
+      bodyIntro:{ size:13, x:0, y:0 },
+      bodyList:{ size:13, x:0, y:0 },
+      detailsIntro:{ size:13, x:0, y:0 },
+      closing:{ size:13, x:0, y:0 },
+      signerName:{ size:13, x:0, y:0 },
+      signerTitle:{ size:13, x:0, y:0 }
+    }
   },
   recipients:[
     {
@@ -121,6 +132,41 @@ function showTab(id){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.tab===id));
   document.querySelectorAll('.panel').forEach(el=>el.classList.toggle('active', el.dataset.panel===id));
   if(id==='generate'){ renderPreviewSelect(); renderPreview(); }
+  refreshStickyPreviews();
+}
+
+/* ============================= STICKY PREVIEW PANELS ============================= */
+/* The preview stays permanently position:fixed on screen while its tab is active,
+   so scrolling the left-hand fields never moves it — only window resize repositions it. */
+const stickyPins = [];
+function registerStickyPreview(anchorId, pinId){
+  const anchor = document.getElementById(anchorId);
+  const pin = document.getElementById(pinId);
+  if(!anchor || !pin) return;
+  anchor.style.position = 'relative';
+  stickyPins.push({anchor, pin});
+}
+function updateStickyPreview(entry){
+  const {anchor, pin} = entry;
+  if(anchor.offsetParent===null) return; // hidden (inactive tab) — skip
+  if(window.innerWidth <= 1000){
+    pin.style.position=''; pin.style.top=''; pin.style.left=''; pin.style.width='';
+    return;
+  }
+  const rect = anchor.getBoundingClientRect();
+  pin.style.position='fixed';
+  pin.style.top='90px';
+  pin.style.left=rect.left+'px';
+  pin.style.width=anchor.offsetWidth+'px';
+}
+function refreshStickyPreviews(){
+  stickyPins.forEach(updateStickyPreview);
+}
+function initStickyPreviews(){
+  registerStickyPreview('lhPreviewAnchor','lhPreviewPin');
+  registerStickyPreview('ctPreviewAnchor','ctPreviewPin');
+  window.addEventListener('resize', refreshStickyPreviews);
+  refreshStickyPreviews();
 }
 
 /* ============================= GENERIC IMAGE CONTROL (upload + size + X/Y) ============================= */
@@ -184,12 +230,13 @@ function initImageControls(){
   renderImageControl('ctrl-signature', 'signature', {placeholder:'Click to upload signature', sizeLabel:'Size', min:50, max:260});
 }
 
-/* Per-line text style controls (size / X / Y) for the organisation-name block */
+/* Per-field text style controls (size / X / Y), reused for Letterhead org-name lines and Letter content fields */
 const TEXT_STYLE_KEYS = ['ministrySi','ministryTa','ministryEn','instituteSi','instituteTa','instituteEn','addressLocal','addressEn'];
-function renderTextStyleControl(key){
-  const container = document.getElementById('ts-'+key);
+const CONTENT_STYLE_KEYS = ['subjectTitle','subjectDateRange','salutation','bodyIntro','bodyList','detailsIntro','closing','signerName','signerTitle'];
+function renderTextStyleControl(containerId, scope, key){
+  const container = document.getElementById(containerId);
   if(!container) return;
-  const st = state.letterhead.textStyles[key];
+  const st = state[scope].textStyles[key];
   container.innerHTML = `
     <div class="ts-row">
       <label>Size <input type="number" class="ts-size" value="${st.size}" step="0.5" min="6" max="40"></label>
@@ -201,7 +248,10 @@ function renderTextStyleControl(key){
   container.querySelector('.ts-y').addEventListener('input', e=>{ st.y=Number(e.target.value); saveState(); renderPreview(); });
 }
 function initTextStyleControls(){
-  TEXT_STYLE_KEYS.forEach(renderTextStyleControl);
+  TEXT_STYLE_KEYS.forEach(key=> renderTextStyleControl('ts-'+key, 'letterhead', key));
+}
+function initContentTextStyleControls(){
+  CONTENT_STYLE_KEYS.forEach(key=> renderTextStyleControl('ts-c-'+key, 'content', key));
 }
 
 /* ============================= LETTERHEAD TEXT BINDINGS ============================= */
@@ -255,6 +305,7 @@ function bindContent(){
       renderPreview();
     });
   });
+  initContentTextStyleControls();
 }
 
 /* ============================= RECIPIENTS ============================= */
@@ -267,8 +318,15 @@ function calcFee(rec){
 function fmtMoney(n){ return Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
 function nextMyNo(){
-  const seq = Number(state.content.myNoSeq||0) + state.recipients.length;
-  return state.content.myNoPrefix + seq;
+  const prefix = state.content.myNoPrefix || '';
+  let maxNum = Number(state.content.myNoSeq||0) - 1;
+  state.recipients.forEach(r=>{
+    if(r.myNo && r.myNo.indexOf(prefix)===0){
+      const n = parseFloat(r.myNo.slice(prefix.length));
+      if(!isNaN(n) && n>maxNum) maxNum = n;
+    }
+  });
+  return prefix + (maxNum+1);
 }
 function addRecipient(){
   const rec = {
@@ -533,10 +591,14 @@ function logoAnchorStyle(img){
   // Anchored to the centre of a fixed-size box, so changing size/X/Y never reflows sibling content.
   return `width:${img.size}px;transform:translate(-50%,-50%) translate(${img.x}px,${img.y}px);`;
 }
-function textStyleAttr(key){
-  const st = state.letterhead.textStyles && state.letterhead.textStyles[key];
+function textStyleInline(scope, key){
+  const st = state[scope] && state[scope].textStyles && state[scope].textStyles[key];
   if(!st) return '';
-  return `style="font-size:${st.size}px;transform:translate(${st.x}px,${st.y}px);"`;
+  return `font-size:${st.size}px;transform:translate(${st.x}px,${st.y}px);`;
+}
+function textStyleAttr(scope, key){
+  const s = textStyleInline(scope, key);
+  return s ? `style="${s}"` : '';
 }
 function buildLetterHTML(rec){
   const L = state.letterhead, C = state.content, IMG = state.images;
@@ -552,17 +614,17 @@ function buildLetterHTML(rec){
     : `<div class="lt-header">
         <div class="logo-box">${IMG.leftLogo.data?`<img src="${IMG.leftLogo.data}" style="${logoAnchorStyle(IMG.leftLogo)}">`:''}</div>
         <div class="lt-org">
-          <div class="t1" ${textStyleAttr('ministrySi')}>${escHtml(L.ministry.si)}</div>
-          <div class="t1" ${textStyleAttr('ministryTa')}>${escHtml(L.ministry.ta)}</div>
-          <div class="t1-en" ${textStyleAttr('ministryEn')}>${escHtml(L.ministry.en)}</div>
-          <div class="t2" ${textStyleAttr('instituteSi')}>${escHtml(L.institute.si)}</div>
-          <div class="t2" ${textStyleAttr('instituteTa')}>${escHtml(L.institute.ta)}</div>
-          <div class="t2-en" ${textStyleAttr('instituteEn')}>${escHtml(L.institute.en)}</div>
+          <div class="t1" ${textStyleAttr('letterhead','ministrySi')}>${escHtml(L.ministry.si)}</div>
+          <div class="t1" ${textStyleAttr('letterhead','ministryTa')}>${escHtml(L.ministry.ta)}</div>
+          <div class="t1-en" ${textStyleAttr('letterhead','ministryEn')}>${escHtml(L.ministry.en)}</div>
+          <div class="t2" ${textStyleAttr('letterhead','instituteSi')}>${escHtml(L.institute.si)}</div>
+          <div class="t2" ${textStyleAttr('letterhead','instituteTa')}>${escHtml(L.institute.ta)}</div>
+          <div class="t2-en" ${textStyleAttr('letterhead','instituteEn')}>${escHtml(L.institute.en)}</div>
         </div>
         <div class="logo-box">${IMG.rightLogo.data?`<img src="${IMG.rightLogo.data}" style="${logoAnchorStyle(IMG.rightLogo)}">`:''}</div>
       </div>
-      <div class="lt-addr" ${textStyleAttr('addressLocal')}>${escHtml(L.addressLocal)}</div>
-      <div class="lt-addr-en" ${textStyleAttr('addressEn')}>${escHtml(L.addressEn)}</div>`;
+      <div class="lt-addr" ${textStyleAttr('letterhead','addressLocal')}>${escHtml(L.addressLocal)}</div>
+      <div class="lt-addr-en" ${textStyleAttr('letterhead','addressEn')}>${escHtml(L.addressEn)}</div>`;
 
   const subHeaderBlock = IMG.subHeaderImage.data
     ? `<img class="lt-subheader-img" src="${IMG.subHeaderImage.data}" style="${imgStyle(IMG.subHeaderImage,{pct:true})}">` : '';
@@ -592,16 +654,16 @@ function buildLetterHTML(rec){
     </div>
     <div class="lt-body">
       <div class="lt-addr-block" style="white-space:pre-line">${escHtml(formatAddressBlock(rec.addressBlock))}</div>
-      <div style="margin-bottom:14px">${escHtml(C.salutation)}</div>
-      <div class="en-title">${escHtml(C.subjectTitle)}</div>
-      <div class="range">${escHtml(C.subjectDateRange)}</div>
-      <p>${escHtml(introText)}</p>
+      <div style="margin-bottom:14px;${textStyleInline('content','salutation')}">${escHtml(C.salutation)}</div>
+      <div class="en-title" ${textStyleAttr('content','subjectTitle')}>${escHtml(C.subjectTitle)}</div>
+      <div class="range" ${textStyleAttr('content','subjectDateRange')}>${escHtml(C.subjectDateRange)}</div>
+      <p ${textStyleAttr('content','bodyIntro')}>${escHtml(introText)}</p>
       ${rec.includeOfficers!==false ? `
-      <p>${escHtml(listText)}</p>
+      <p ${textStyleAttr('content','bodyList')}>${escHtml(listText)}</p>
       <div class="lt-names">
         ${rec.officers.filter(o=>o.trim()!=='').map((o,i)=>`<div>${String(i+1).padStart(2,'0')}. ${escHtml(o)}</div>`).join('')}
       </div>` : ''}
-      <p>${escHtml(C.detailsIntro)}</p>
+      <p ${textStyleAttr('content','detailsIntro')}>${escHtml(C.detailsIntro)}</p>
       <div class="lt-details">
         <table>
           <tr><td class="k">${escHtml(L.refLabels.date.si)}</td><td>- ${escHtml(pDate)}</td></tr>
@@ -610,11 +672,11 @@ function buildLetterHTML(rec){
           ${rec.includeOfficers!==false ? `<tr><td class="k">Fee</td><td>- Rs.${fmtMoney(fee.total)} (per person Rs.${fmtMoney(fee.per)})</td></tr>` : ''}
         </table>
       </div>
-      <p>${escHtml(C.closing)}</p>
+      <p ${textStyleAttr('content','closing')}>${escHtml(C.closing)}</p>
       <div class="lt-sign">
         ${signatureImg}
-        <div>${escHtml(C.signerName)}</div>
-        <div>${escHtml(C.signerTitle)}</div>
+        <div ${textStyleAttr('content','signerName')}>${escHtml(C.signerName)}</div>
+        <div ${textStyleAttr('content','signerTitle')}>${escHtml(C.signerTitle)}</div>
       </div>
     </div>
   </div>
@@ -637,12 +699,13 @@ function applyTypography(paperEl){
 function renderPreview(){
   const rec = getPreviewRecipient();
   const html = rec ? buildLetterHTML(rec) : '<p style="text-align:center;color:#999;margin-top:100px">Add a recipient to preview a letter.</p>';
-  ['previewPaper','letterheadPreviewPaper'].forEach(id=>{
+  ['previewPaper','letterheadPreviewPaper','contentPreviewPaper'].forEach(id=>{
     const paper = document.getElementById(id);
     if(!paper) return;
     applyTypography(paper);
     paper.innerHTML = html;
   });
+  refreshStickyPreviews();
 }
 function getPreviewRecipient(){
   const sel = document.getElementById('previewSelect');
@@ -848,6 +911,7 @@ function init(){
   document.getElementById('downloadCombinedBtn').addEventListener('click', downloadCombined);
   bindSettings();
   setupAutoBackup();
+  initStickyPreviews();
   window.addEventListener('beforeunload', saveState);
 }
 init();

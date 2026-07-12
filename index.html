@@ -31,8 +31,8 @@
       <h1 class="page-title">Letterhead</h1>
       <p class="page-sub">Logos, organisation name, reference-number labels and footer — these appear on every letter you generate. All text is editable, so this works for any government, semi-government or private organisation.</p>
 
-      <div class="letterhead-layout">
-        <div class="letterhead-controls">
+      <div class="split-layout">
+        <div class="split-controls">
 
       <div class="card">
         <h3>Logos</h3>
@@ -155,10 +155,12 @@
       </div>
 
         </div>
-        <div class="letterhead-preview-col">
-          <div class="mini-preview-sticky">
-            <div class="mini-preview-frame"><div class="paper" id="letterheadPreviewPaper"></div></div>
-            <p class="hint" style="text-align:center;margin-top:10px">Live preview — updates as you edit the fields on the left.</p>
+        <div class="split-preview-col">
+          <div class="mini-preview-anchor" id="lhPreviewAnchor">
+            <div class="mini-preview-pin" id="lhPreviewPin">
+              <div class="mini-preview-frame"><div class="paper" id="letterheadPreviewPaper"></div></div>
+              <p class="hint" style="text-align:center;margin-top:10px">Live preview — updates as you edit the fields on the left.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -167,22 +169,32 @@
     <!-- LETTER CONTENT -->
     <div class="panel" data-panel="content">
       <h1 class="page-title">Letter content</h1>
-      <p class="page-sub">The wording and programme details used for every recipient. Use <code>{refDate}</code> and <code>{count}</code> placeholders where shown.</p>
+      <p class="page-sub">The wording and programme details used for every recipient. Use <code>{refDate}</code> and <code>{count}</code> placeholders where shown. Each field also has its own size and X/Y position.</p>
+
+      <div class="split-layout">
+        <div class="split-controls">
 
       <div class="card">
         <h3>Subject</h3>
         <div class="field"><label>Programme / subject title</label><input type="text" id="subjectTitle"></div>
+        <div id="ts-c-subjectTitle"></div>
         <div class="field"><label>Programme date range (shown under subject)</label><input type="text" id="subjectDateRange"></div>
+        <div id="ts-c-subjectDateRange"></div>
         <div class="field"><label>Salutation</label><input type="text" id="salutation"></div>
+        <div id="ts-c-salutation"></div>
       </div>
 
       <div class="card">
         <h3>Body wording</h3>
         <div class="field"><label>Reference date (of the institute's original letter)</label><input type="text" id="refLetterDate"></div>
         <div class="field"><label>Intro paragraph — use {refDate}</label><textarea id="bodyIntro" rows="3"></textarea></div>
+        <div id="ts-c-bodyIntro"></div>
         <div class="field"><label>Confirmation paragraph — use {count} for number of officers</label><textarea id="bodyList" rows="3"></textarea></div>
+        <div id="ts-c-bodyList"></div>
         <div class="field"><label>Details intro line</label><input type="text" id="detailsIntro"></div>
+        <div id="ts-c-detailsIntro"></div>
         <div class="field"><label>Closing line</label><input type="text" id="closing"></div>
+        <div id="ts-c-closing"></div>
       </div>
 
       <div class="card">
@@ -203,6 +215,10 @@
           <div class="field"><label>Signer name</label><input type="text" id="signerName"></div>
           <div class="field"><label>Signer designation</label><input type="text" id="signerTitle"></div>
         </div>
+        <div class="grid2">
+          <div id="ts-c-signerName"></div>
+          <div id="ts-c-signerTitle"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -211,7 +227,18 @@
           <div class="field"><label>Prefix</label><input type="text" id="myNoPrefix"></div>
           <div class="field"><label>Starting sequence number</label><input type="number" id="myNoSeq" min="0" step="1"></div>
         </div>
-        <div class="hint">Each new recipient automatically gets the next number in this sequence. Editable per recipient.</div>
+        <div class="hint">Each new recipient automatically gets one more than the highest My No currently in use (even after manual edits, duplicates or deletions), so numbers never repeat.</div>
+      </div>
+
+        </div>
+        <div class="split-preview-col">
+          <div class="mini-preview-anchor" id="ctPreviewAnchor">
+            <div class="mini-preview-pin" id="ctPreviewPin">
+              <div class="mini-preview-frame"><div class="paper" id="contentPreviewPaper"></div></div>
+              <p class="hint" style="text-align:center;margin-top:10px">Live preview — updates as you edit the fields on the left.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
