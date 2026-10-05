@@ -332,7 +332,7 @@ function addRecipient(){
   const rec = {
     id:uid(), institutionName:"", addressBlock:"", yourNo:"",
     myNo: nextMyNo(), date:new Date().toISOString().slice(0,10).replace(/-/g,'.'),
-    officers:[""], programDateOverride:"", programTimeOverride:"", programVenueOverride:"", feePerPersonOverride:""
+    officers:[""], refLetterDateOverride:"", programDateOverride:"", programTimeOverride:"", programVenueOverride:"", feePerPersonOverride:""
   };
   state.recipients.push(rec); saveState(); renderRecipients();
   setTimeout(()=>{ const els=document.querySelectorAll('.recipient-card'); if(els.length){ els[els.length-1].classList.add('open'); els[els.length-1].scrollIntoView({behavior:'smooth', block:'center'}); } }, 30);
@@ -376,6 +376,7 @@ function renderRecipients(){
           <div class="field"><label>My No</label><input type="text" data-f="myNo" value="${escAttr(rec.myNo)}"></div>
           <div class="field"><label>Date</label><input type="text" data-f="date" value="${escAttr(rec.date)}"></div>
         </div>
+        <div class="field"><label>Ref letter date <span class="hint" style="display:inline;font-size:11px;font-style:italic">(used for {refDate} — leave blank to use the global default)</span></label><input type="text" data-f="refLetterDateOverride" value="${escAttr(rec.refLetterDateOverride||'')}" placeholder="${escAttr(state.content.refLetterDate)}"></div>
 
         <div class="grid2" style="align-items:start">
           <div class="rec-section">
@@ -513,12 +514,12 @@ function bindBulkImport(){
     showTab('recipients');
   });
 }
-function addRecipientFromParts(inst, addr, yourNo, officersStr){
+function addRecipientFromParts(inst, addr, yourNo, officersStr, refLetterDate){
   const rec = {
     id:uid(), institutionName: inst||'', addressBlock:(addr||'').split('/').map(s=>s.trim()).join('\n'),
     yourNo: yourNo||'', myNo: nextMyNo(), date:new Date().toISOString().slice(0,10).replace(/-/g,'.'),
     officers: (officersStr||'').split(/[,;]/).map(s=>s.trim()).filter(Boolean),
-    programDateOverride:"", programTimeOverride:"", programVenueOverride:"", feePerPersonOverride:""
+    refLetterDateOverride: refLetterDate||'', programDateOverride:"", programTimeOverride:"", programVenueOverride:"", feePerPersonOverride:""
   };
   if(rec.officers.length===0) rec.officers=[""];
   state.recipients.push(rec);
@@ -543,8 +544,9 @@ function bindExcelImport(){
           const addr = keys['address'] || '';
           const yourNo = keys['your no'] || keys['yourno'] || keys['reference'] || '';
           const officers = keys['officers'] || keys['officer names'] || keys['names'] || '';
+          const refLetterDate = keys['ref letter date'] || keys['ref date'] || keys['refdate'] || '';
           if(!inst && !addr && !officers) return;
-          addRecipientFromParts(inst, String(addr).split('\n').join('/'), yourNo, officers);
+          addRecipientFromParts(inst, String(addr).split('\n').join('/'), yourNo, officers, String(refLetterDate));
           added++;
         });
         saveState(); renderRecipients(); showTab('recipients');
@@ -556,8 +558,8 @@ function bindExcelImport(){
   });
   document.getElementById('excelTemplateBtn').addEventListener('click', ()=>{
     const wsData = [
-      ['Institution Name','Address','Your No','Officers'],
-      ['Sample Institution','Designation, Division\nCity','YOUR-REF-001','A.B.C. Perera, S.M.N. Fernando']
+      ['Institution Name','Address','Your No','Ref Letter Date','Officers'],
+      ['Sample Institution','Designation, Division\nCity','YOUR-REF-001','2026.01.15','A.B.C. Perera, S.M.N. Fernando']
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
@@ -603,7 +605,7 @@ function textStyleAttr(scope, key){
 function buildLetterHTML(rec){
   const L = state.letterhead, C = state.content, IMG = state.images;
   const fee = calcFee(rec);
-  const introText = C.bodyIntro.replace(/{refDate}/g, C.refLetterDate);
+  const introText = C.bodyIntro.replace(/{refDate}/g, rec.refLetterDateOverride || C.refLetterDate);
   const listText = C.bodyList.replace(/{count}/g, fee.count);
   const pDate = rec.programDateOverride || C.programDate;
   const pTime = rec.programTimeOverride || C.programTime;
