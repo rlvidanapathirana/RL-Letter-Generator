@@ -733,12 +733,31 @@ function buildLetterHTML(rec, opts){
       ${showEnd ? detailsBlock : ''}`;
   }
 
+  if(isPage2){
+    /* Page 2: NO header — just body content + footer */
+    return `
+  <div class="lt-top" style="padding-top:6mm;">
+    <div class="lt-body">${bodyHTML}
+    </div>
+  </div>
+  <div class="lt-bottom">
+    ${footerBlock}
+    ${state.settings.showCredit ? '<div class="lt-credit">System by V.P.R. Lakshan Vidanapathirana</div>' : ''}
+  </div>
+  `;
+  }
+
+  /* Page 1 or single-page */
   return `
   <div class="lt-top">
     ${headerBlock}
     <hr class="lt-rule">
     ${subHeaderBlock}
-    ${refOrCont}
+    <div class="lt-ref">
+      ${refCell(L.refLabels.myNo, rec.myNo)}
+      ${refCell(L.refLabels.yourNo, rec.yourNo)}
+      ${refCell(L.refLabels.date, rec.date)}
+    </div>
     <div class="lt-body">${bodyHTML}
     </div>
   </div>
@@ -827,8 +846,11 @@ async function renderRecipientToCanvases(rec){
   let splitIdx  = -1;
 
   if(ltBody && ltNames){
-    const bodyOffsetTop  = ltBody.offsetTop; // from paper (position:relative)
-    const availForBody   = AVAIL - bodyOffsetTop - BPAD - 28; // 28px buffer for PTO
+    // AVAIL_FULL = full paper height in px; bodyOffsetTop is measured from paper border
+    // (includes the 12mm top padding), so we use the full 297mm, not (297-12)mm
+    const AVAIL_FULL     = Math.round(297*MM);          // ≈ 1122 px
+    const bodyOffsetTop  = ltBody.offsetTop;             // from paper border (includes top-pad)
+    const availForBody   = AVAIL_FULL - bodyOffsetTop - BPAD - 28; // 28px PTO buffer
     const bodyChildren   = Array.from(ltBody.children);
     const namesChildIdx  = bodyChildren.indexOf(ltNames);
     let cumH = 0;
