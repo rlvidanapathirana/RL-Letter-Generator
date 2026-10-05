@@ -254,6 +254,7 @@
         <input type="file" id="excelImportInput" accept=".xlsx,.xls,.csv" style="display:none">
         <button class="btn btn-ghost" id="excelTemplateBtn">Download Excel template</button>
         <div class="spacer"></div>
+        <button class="btn btn-danger" id="clearAllRecipientsBtn">Clear all recipients</button>
       </div>
 
       <div id="bulkImportPanel" class="card" style="display:none">
@@ -292,6 +293,7 @@
           <button class="btn btn-primary" id="generateAllBtn">Generate all PDFs</button>
           <button class="btn btn-gold" id="downloadZipBtn" disabled>Download ZIP (individual PDFs)</button>
           <button class="btn btn-ghost" id="downloadCombinedBtn" disabled>Download combined PDF</button>
+          <button class="btn btn-danger" id="clearGenResultsBtn" style="margin-left:auto">Clear results</button>
         </div>
         <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
         <div class="gen-list" id="genList"></div>

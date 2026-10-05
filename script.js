@@ -905,8 +905,21 @@ function init(){
   renderPreviewSelect();
   renderPreview();
   document.getElementById('addRecipientBtn').addEventListener('click', addRecipient);
+  document.getElementById('clearAllRecipientsBtn').addEventListener('click', ()=>{
+    if(!state.recipients.length) return;
+    if(!confirm('This will remove all ' + state.recipients.length + ' recipient(s). Are you sure?')) return;
+    state.recipients = [];
+    saveState(); renderRecipients(); renderPreviewSelect(); renderPreview();
+  });
   document.getElementById('previewSelect').addEventListener('change', renderPreview);
   document.getElementById('generateAllBtn').addEventListener('click', generateAll);
+  document.getElementById('clearGenResultsBtn').addEventListener('click', ()=>{
+    genResults = [];
+    document.getElementById('genList').innerHTML = '';
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('downloadZipBtn').disabled = true;
+    document.getElementById('downloadCombinedBtn').disabled = true;
+  });
   document.getElementById('downloadZipBtn').addEventListener('click', downloadZip);
   document.getElementById('downloadCombinedBtn').addEventListener('click', downloadCombined);
   bindSettings();
