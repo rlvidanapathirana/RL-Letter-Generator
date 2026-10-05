@@ -602,35 +602,69 @@ function textStyleAttr(scope, key){
   const s = textStyleInline(scope, key);
   return s ? `style="${s}"` : '';
 }
-function buildLetterHTML(rec){
+/* buildLetterHTML(rec, opts)
+   opts.page2        = true  → compact header, skip address/salutation/intro, show remaining officers
+   opts.officerStart = N     → first officer index to show (default 0)
+   opts.officerEnd   = N     → one-past-last officer index (default all)
+   opts.showPTO      = true  → append P.T.O. line, suppress details/closing/sign
+*/
+function buildLetterHTML(rec, opts){
+  opts = opts || {};
+  const isPage2  = !!opts.page2;
+  const showPTO  = !!opts.showPTO;
+  const showEnd  = !showPTO; // details + closing + sign only when NOT showing PTO
+
   const L = state.letterhead, C = state.content, IMG = state.images;
   const fee = calcFee(rec);
   const introText = C.bodyIntro.replace(/{refDate}/g, rec.refLetterDateOverride || C.refLetterDate);
-  const listText = C.bodyList.replace(/{count}/g, fee.count);
+  const listText  = C.bodyList.replace(/{count}/g, fee.count);
   const pDate = rec.programDateOverride || C.programDate;
   const pTime = rec.programTimeOverride || C.programTime;
   const pVenue = rec.programVenueOverride || C.programVenue;
 
-  const headerBlock = IMG.headerImage.data
-    ? `<img class="lt-header-img" src="${IMG.headerImage.data}" style="${imgStyle(IMG.headerImage,{pct:true})}">`
-    : `<div class="lt-header">
-        <div class="logo-box">${IMG.leftLogo.data?`<img src="${IMG.leftLogo.data}" style="${logoAnchorStyle(IMG.leftLogo)}">`:''}</div>
-        <div class="lt-org">
-          <div class="t1" ${textStyleAttr('letterhead','ministrySi')}>${escHtml(L.ministry.si)}</div>
-          <div class="t1" ${textStyleAttr('letterhead','ministryTa')}>${escHtml(L.ministry.ta)}</div>
-          <div class="t1-en" ${textStyleAttr('letterhead','ministryEn')}>${escHtml(L.ministry.en)}</div>
-          <div class="t2" ${textStyleAttr('letterhead','instituteSi')}>${escHtml(L.institute.si)}</div>
-          <div class="t2" ${textStyleAttr('letterhead','instituteTa')}>${escHtml(L.institute.ta)}</div>
-          <div class="t2-en" ${textStyleAttr('letterhead','instituteEn')}>${escHtml(L.institute.en)}</div>
-        </div>
-        <div class="logo-box">${IMG.rightLogo.data?`<img src="${IMG.rightLogo.data}" style="${logoAnchorStyle(IMG.rightLogo)}">`:''}</div>
-      </div>
-      <div class="lt-addr" ${textStyleAttr('letterhead','addressLocal')}>${escHtml(L.addressLocal)}</div>
-      <div class="lt-addr-en" ${textStyleAttr('letterhead','addressEn')}>${escHtml(L.addressEn)}</div>`;
+  // Officers slice
+  const allOfficers = rec.officers.filter(o=>o.trim()!=='');
+  const oStart = opts.officerStart || 0;
+  const oEnd   = (opts.officerEnd !== undefined) ? opts.officerEnd : allOfficers.length;
+  const officers = allOfficers.slice(oStart, oEnd);
 
-  const subHeaderBlock = IMG.subHeaderImage.data
+  /* ---- Header block ---- */
+  let headerBlock;
+  if(isPage2){
+    // Compact header: just org name text, no logos
+    headerBlock = `<div class="lt-header" style="justify-content:center;text-align:center;">
+      <div class="lt-org">
+        <div class="t2" style="font-size:12px;">${escHtml(L.institute.si)}</div>
+        <div class="t2" style="font-size:12px;">${escHtml(L.institute.ta)}</div>
+        <div class="t2-en" style="font-size:14px;">${escHtml(L.institute.en)}</div>
+      </div>
+    </div>
+    <div class="lt-addr">${escHtml(L.addressLocal)}</div>
+    <div class="lt-addr-en">${escHtml(L.addressEn)}</div>`;
+  } else {
+    headerBlock = IMG.headerImage.data
+      ? `<img class="lt-header-img" src="${IMG.headerImage.data}" style="${imgStyle(IMG.headerImage,{pct:true})}">` 
+      : `<div class="lt-header">
+          <div class="logo-box">${IMG.leftLogo.data?`<img src="${IMG.leftLogo.data}" style="${logoAnchorStyle(IMG.leftLogo)}">`:''}</div>
+          <div class="lt-org">
+            <div class="t1" ${textStyleAttr('letterhead','ministrySi')}>${escHtml(L.ministry.si)}</div>
+            <div class="t1" ${textStyleAttr('letterhead','ministryTa')}>${escHtml(L.ministry.ta)}</div>
+            <div class="t1-en" ${textStyleAttr('letterhead','ministryEn')}>${escHtml(L.ministry.en)}</div>
+            <div class="t2" ${textStyleAttr('letterhead','instituteSi')}>${escHtml(L.institute.si)}</div>
+            <div class="t2" ${textStyleAttr('letterhead','instituteTa')}>${escHtml(L.institute.ta)}</div>
+            <div class="t2-en" ${textStyleAttr('letterhead','instituteEn')}>${escHtml(L.institute.en)}</div>
+          </div>
+          <div class="logo-box">${IMG.rightLogo.data?`<img src="${IMG.rightLogo.data}" style="${logoAnchorStyle(IMG.rightLogo)}">`:''}</div>
+        </div>
+        <div class="lt-addr" ${textStyleAttr('letterhead','addressLocal')}>${escHtml(L.addressLocal)}</div>
+        <div class="lt-addr-en" ${textStyleAttr('letterhead','addressEn')}>${escHtml(L.addressEn)}</div>`;
+  }
+
+  /* ---- Subheader (page 1 only) ---- */
+  const subHeaderBlock = (!isPage2 && IMG.subHeaderImage.data)
     ? `<img class="lt-subheader-img" src="${IMG.subHeaderImage.data}" style="${imgStyle(IMG.subHeaderImage,{pct:true})}">` : '';
 
+  /* ---- Footer block (same on both pages) ---- */
   const footerBlock = IMG.footerImage.data
     ? `<hr class="lt-footer-rule"><img class="lt-footer-img" src="${IMG.footerImage.data}" style="${imgStyle(IMG.footerImage,{pct:true})}">`
     : `<hr class="lt-footer-rule">
@@ -641,30 +675,12 @@ function buildLetterHTML(rec){
       </div>
       <div class="lt-footer-bottom"><span>Website : ${escHtml(L.footerWeb)}</span><span>E-mail : ${escHtml(L.footerEmail)}</span></div>`;
 
+  /* ---- Signature ---- */
   const signatureImg = IMG.signature.data
     ? `<img class="lt-signature-img" src="${IMG.signature.data}" style="${imgStyle(IMG.signature)}">` : '';
 
-  return `
-  <div class="lt-top">
-    ${headerBlock}
-    <hr class="lt-rule">
-    ${subHeaderBlock}
-    <div class="lt-ref">
-      ${refCell(L.refLabels.myNo, rec.myNo)}
-      ${refCell(L.refLabels.yourNo, rec.yourNo)}
-      ${refCell(L.refLabels.date, rec.date)}
-    </div>
-    <div class="lt-body">
-      <div class="lt-addr-block" style="white-space:pre-line">${escHtml(formatAddressBlock(rec.addressBlock))}</div>
-      <div style="margin-bottom:14px;${textStyleInline('content','salutation')}">${escHtml(C.salutation)}</div>
-      <div class="en-title" ${textStyleAttr('content','subjectTitle')}>${escHtml(C.subjectTitle)}</div>
-      <div class="range" ${textStyleAttr('content','subjectDateRange')}>${escHtml(C.subjectDateRange)}</div>
-      <p ${textStyleAttr('content','bodyIntro')}>${escHtml(introText)}</p>
-      ${rec.includeOfficers!==false ? `
-      <p ${textStyleAttr('content','bodyList')}>${escHtml(listText)}</p>
-      <div class="lt-names">
-        ${rec.officers.filter(o=>o.trim()!=='').map((o,i)=>`<div>${String(i+1).padStart(2,'0')}. ${escHtml(o)}</div>`).join('')}
-      </div>` : ''}
+  /* ---- Details + Closing + Sign block (shared) ---- */
+  const detailsBlock = `
       <p ${textStyleAttr('content','detailsIntro')}>${escHtml(C.detailsIntro)}</p>
       <div class="lt-details">
         <table>
@@ -679,7 +695,51 @@ function buildLetterHTML(rec){
         ${signatureImg}
         <div ${textStyleAttr('content','signerName')}>${escHtml(C.signerName)}</div>
         <div ${textStyleAttr('content','signerTitle')}>${escHtml(C.signerTitle)}</div>
-      </div>
+      </div>`;
+
+  /* ---- Ref block (page 1) or Continued marker (page 2) ---- */
+  const refOrCont = isPage2
+    ? `<div style="border-top:1px solid #aaa;margin:6px 0 10px;padding-top:5px;font-size:10px;color:#555;text-align:right;font-family:var(--font-body);font-style:italic;">...ඉදිරිය (Continued)</div>`
+    : `<div class="lt-ref">
+        ${refCell(L.refLabels.myNo, rec.myNo)}
+        ${refCell(L.refLabels.yourNo, rec.yourNo)}
+        ${refCell(L.refLabels.date, rec.date)}
+      </div>`;
+
+  /* ---- Body content ---- */
+  let bodyHTML;
+  if(isPage2){
+    // Page 2: remaining officers + details + closing + sign
+    bodyHTML = `
+      ${rec.includeOfficers!==false && officers.length>0 ? `
+      <div class="lt-names">
+        ${officers.map((o,i)=>`<div>${String(oStart+i+1).padStart(2,'0')}. ${escHtml(o)}</div>`).join('')}
+      </div>` : ''}
+      ${detailsBlock}`;
+  } else {
+    // Page 1 (or single page)
+    bodyHTML = `
+      <div class="lt-addr-block" style="white-space:pre-line">${escHtml(formatAddressBlock(rec.addressBlock))}</div>
+      <div style="margin-bottom:14px;${textStyleInline('content','salutation')}">${escHtml(C.salutation)}</div>
+      <div class="en-title" ${textStyleAttr('content','subjectTitle')}>${escHtml(C.subjectTitle)}</div>
+      <div class="range" ${textStyleAttr('content','subjectDateRange')}>${escHtml(C.subjectDateRange)}</div>
+      <p ${textStyleAttr('content','bodyIntro')}>${escHtml(introText)}</p>
+      ${rec.includeOfficers!==false ? `
+      <p ${textStyleAttr('content','bodyList')}>${escHtml(listText)}</p>
+      <div class="lt-names">
+        ${officers.map((o,i)=>`<div>${String(oStart+i+1).padStart(2,'0')}. ${escHtml(o)}</div>`).join('')}
+      </div>` : ''}
+      ${showPTO ? `<div style="text-align:right;font-size:11px;font-weight:800;color:#333;margin-top:10px;font-family:var(--font-body);letter-spacing:1px;">P.T.O.</div>` : ''}
+      ${showEnd ? detailsBlock : ''}`;
+  }
+
+  return `
+  <div class="lt-top">
+    ${headerBlock}
+    <hr class="lt-rule">
+    ${subHeaderBlock}
+    ${refOrCont}
+    <div class="lt-body">${bodyHTML}
     </div>
   </div>
   <div class="lt-bottom">
@@ -719,28 +779,107 @@ function getPreviewRecipient(){
 }
 
 /* ============================= PDF GENERATION ============================= */
-async function renderRecipientToCanvas(rec){
+
+/* Renders one paper div and returns its canvas */
+async function _renderPaperToCanvas(html, typography){
   const host = document.getElementById('offscreenHost');
-  host.innerHTML = '';
   const paper = document.createElement('div');
   paper.className = 'paper for-pdf';
   paper.style.boxShadow = 'none';
-  applyTypography(paper);
-  paper.innerHTML = buildLetterHTML(rec);
+  if(typography) applyTypography(paper);
+  paper.innerHTML = html;
   host.appendChild(paper);
-  await new Promise(r=>setTimeout(r, 60)); // allow fonts/images to settle
+  await new Promise(r=>setTimeout(r, 70));
   const canvas = await html2canvas(paper, {scale:2, useCORS:true, backgroundColor:'#ffffff'});
-  host.innerHTML = '';
+  host.removeChild(paper);
   return canvas;
 }
-async function canvasToPdfBlob(canvas){
+
+/* Returns an array of canvases (1 for single-page, 2 for overflow) */
+async function renderRecipientToCanvases(rec){
+  const host = document.getElementById('offscreenHost');
+  const MM   = 3.7795; // px per mm at 96 dpi
+  const AVAIL= Math.round((297-12)*MM); // paper height minus top padding ≈ 1077 px
+  const BPAD = Math.round(40*MM);       // lt-top padding-bottom ≈ 151 px
+
+  /* --- Step 1: measure full letter in unconstrained div --- */
+  host.innerHTML = '';
+  const mp = document.createElement('div');
+  mp.className = 'paper for-pdf';
+  mp.style.cssText = 'box-shadow:none;height:auto;overflow:visible;';
+  applyTypography(mp);
+  mp.innerHTML = buildLetterHTML(rec);
+  host.appendChild(mp);
+  await new Promise(r=>setTimeout(r, 80));
+
+  const ltTop  = mp.querySelector('.lt-top');
+  const overflow = ltTop && ltTop.scrollHeight > AVAIL;
+
+  if(!overflow){
+    /* single page — use existing simple path */
+    host.innerHTML = '';
+    return [await _renderPaperToCanvas(buildLetterHTML(rec), true)];
+  }
+
+  /* --- Step 2: find officer split index --- */
+  const ltBody  = mp.querySelector('.lt-body');
+  const ltNames = mp.querySelector('.lt-names');
+  let splitIdx  = -1;
+
+  if(ltBody && ltNames){
+    const bodyOffsetTop  = ltBody.offsetTop; // from paper (position:relative)
+    const availForBody   = AVAIL - bodyOffsetTop - BPAD - 28; // 28px buffer for PTO
+    const bodyChildren   = Array.from(ltBody.children);
+    const namesChildIdx  = bodyChildren.indexOf(ltNames);
+    let cumH = 0;
+    for(let i=0;i<namesChildIdx;i++){
+      const el = bodyChildren[i];
+      const cs = getComputedStyle(el);
+      cumH += el.offsetHeight + parseFloat(cs.marginTop||0) + parseFloat(cs.marginBottom||0);
+    }
+    const spaceForNames = availForBody - cumH;
+    const officerDivs   = Array.from(ltNames.children);
+    let nameCumH = 0;
+    for(let i=0;i<officerDivs.length;i++){
+      const rowH = officerDivs[i].offsetHeight + 3;
+      if(nameCumH + rowH > spaceForNames){ splitIdx = i; break; }
+      nameCumH += rowH;
+    }
+  }
+  host.innerHTML = '';
+
+  const allOfficers = rec.officers.filter(o=>o.trim()!=='');
+  if(splitIdx<=0) splitIdx=1;
+  if(splitIdx>=allOfficers.length){
+    /* officers all fit — something else causes overflow; render single page */
+    return [await _renderPaperToCanvas(buildLetterHTML(rec), true)];
+  }
+
+  /* --- Step 3: render page 1 + page 2 --- */
+  const c1 = await _renderPaperToCanvas(
+    buildLetterHTML(rec, {officerEnd:splitIdx, showPTO:true}), true);
+  const c2 = await _renderPaperToCanvas(
+    buildLetterHTML(rec, {page2:true, officerStart:splitIdx}), true);
+  return [c1, c2];
+}
+
+/* Backwards-compat wrapper (used nowhere now but kept safe) */
+async function renderRecipientToCanvas(rec){
+  const canvases = await renderRecipientToCanvases(rec);
+  return canvases[0];
+}
+
+/* Build a multi-page PDF blob from an array of canvases */
+async function canvasesToPdfBlob(canvases){
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p','mm','a4');
-  const pageW = 210, pageH = 297;
-  const imgData = canvas.toDataURL('image/jpeg', 0.95);
-  pdf.addImage(imgData,'JPEG',0,0,pageW,pageH);
+  for(let i=0;i<canvases.length;i++){
+    if(i>0) pdf.addPage();
+    pdf.addImage(canvases[i].toDataURL('image/jpeg',0.95),'JPEG',0,0,210,297);
+  }
   return pdf.output('blob');
 }
+async function canvasToPdfBlob(canvas){ return canvasesToPdfBlob([canvas]); }
 function safeFileName(s){ return (s||'letter').replace(/[^a-zA-Z0-9_\-\u0D80-\u0DFF\u0B80-\u0BFF ]/g,'').trim().replace(/\s+/g,'_').slice(0,60) || 'letter'; }
 
 async function generateAll(){
@@ -758,11 +897,12 @@ async function generateAll(){
     const row = genList.querySelector(`.gen-row[data-id="${rec.id}"]`);
     row.querySelector('.status').textContent = 'Rendering…';
     try{
-      const canvas = await renderRecipientToCanvas(rec);
-      const blob = await canvasToPdfBlob(canvas);
+      const canvases = await renderRecipientToCanvases(rec);
+      const blob = await canvasesToPdfBlob(canvases);
+      const pages = canvases.length;
       genResults.push({id:rec.id, name: safeFileName(rec.institutionName)+'.pdf', blob});
       row.classList.add('done');
-      row.querySelector('.status').textContent = 'Done ✓';
+      row.querySelector('.status').textContent = pages>1 ? `Done ✓ (${pages} pages)` : 'Done ✓';
     }catch(e){
       row.querySelector('.status').textContent = 'Failed';
       console.error(e);
@@ -787,12 +927,15 @@ async function downloadCombined(){
   if(!genResults.length) return;
   const { jsPDF } = window.jspdf;
   const combined = new jsPDF('p','mm','a4');
+  let firstPage = true;
   for(let i=0;i<state.recipients.length;i++){
     const rec = state.recipients[i];
-    const canvas = await renderRecipientToCanvas(rec);
-    const imgData = canvas.toDataURL('image/jpeg',0.95);
-    if(i>0) combined.addPage();
-    combined.addImage(imgData,'JPEG',0,0,210,297);
+    const canvases = await renderRecipientToCanvases(rec);
+    for(let j=0;j<canvases.length;j++){
+      if(!firstPage) combined.addPage();
+      combined.addImage(canvases[j].toDataURL('image/jpeg',0.95),'JPEG',0,0,210,297);
+      firstPage = false;
+    }
   }
   triggerDownload(combined.output('blob'), 'RL_Letters_Combined_'+Date.now()+'.pdf');
 }
