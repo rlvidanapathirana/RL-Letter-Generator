@@ -684,7 +684,6 @@ function buildLetterHTML(rec, opts){
   if(isPage2){
     return `
   <div class="lt-top" style="padding-top:6mm;">
-    <div style="border-top:1px solid #aaa;margin:6px 0 10px;padding-top:5px;font-size:10px;color:#555;text-align:right;font-family:var(--font-body);font-style:italic;">...ඉදිරිය (Continued)</div>
     <div class="lt-body">${bodyHTML}</div>
   </div>
   <div class="lt-bottom">
@@ -764,7 +763,7 @@ async function renderRecipientToCanvases(rec){
   const host = document.getElementById('offscreenHost');
   const MM   = 3.7795; // px per mm at 96 dpi
   const AVAIL_FULL = Math.round(297*MM);
-  const BPAD = Math.round(40*MM);
+  const BPAD = Math.round(25*MM);
 
   host.innerHTML = '';
   const wrapper = document.createElement('div');

@@ -219,7 +219,7 @@ input[type=range]{width:100%;accent-color:var(--forest);height:6px;padding:0;}
   box-shadow:0 2px 6px rgba(0,0,0,.15);letter-spacing:1px;
   z-index:5;
 }
-.lt-top{padding-bottom:40mm;}
+.lt-top{padding-bottom:25mm;}
 .lt-bottom{position:absolute;left:15mm;right:15mm;bottom:5mm;}
 
 .lt-header{display:flex;align-items:center;gap:8px;justify-content:center;text-align:center;}
