@@ -871,11 +871,8 @@ async function renderRecipientToCanvases(rec){
   host.innerHTML = '';
 
   const allOfficers = rec.officers.filter(o=>o.trim()!=='');
-  if(splitIdx<=0) splitIdx=1;
-  if(splitIdx>=allOfficers.length){
-    /* officers all fit — something else causes overflow; render single page */
-    return [await _renderPaperToCanvas(buildLetterHTML(rec), true)];
-  }
+  if(splitIdx === -1) splitIdx = allOfficers.length;
+  if(splitIdx === 0 && allOfficers.length > 0) splitIdx = 1;
 
   /* --- Step 3: render page 1 + page 2 --- */
   const c1 = await _renderPaperToCanvas(
