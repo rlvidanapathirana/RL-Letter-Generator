@@ -668,10 +668,10 @@ function buildLetterHTML(rec){
       <p ${textStyleAttr('content','detailsIntro')}>${escHtml(C.detailsIntro)}</p>
       <div class="lt-details">
         <table>
-          <tr><td class="k">${escHtml(L.refLabels.date.si)}</td><td>- ${escHtml(pDate)}</td></tr>
+          <tr><td class="k">පැවැත්වෙන දිනය</td><td>- ${escHtml(pDate)}</td></tr>
           <tr><td class="k">වේලාව</td><td>- ${escHtml(pTime)}</td></tr>
           <tr><td class="k">ස්ථානය</td><td>- ${escHtml(pVenue)}</td></tr>
-          ${rec.includeOfficers!==false ? `<tr><td class="k">පාඨමාලා ගාස්තුව</td><td>- රු.${fmtMoney(fee.total)} (1 දෙනෙකුට රු.${fmtMoney(fee.per)})</td></tr>` : ''}
+          ${rec.includeOfficers!==false ? `<tr><td class="k">පාඨමාලා ගාස්තුව</td><td>- රු.${fmtMoney(fee.total)} (එක් අයෙකු සඳහා රු.${fmtMoney(fee.per)})</td></tr>` : ''}
         </table>
       </div>
       <p ${textStyleAttr('content','closing')}>${escHtml(C.closing)}</p>
